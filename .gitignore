@@ -1,0 +1,29 @@
+# --- Ansible Specifics ---
+*.retry
+
+# --- Sensitive Data ---
+# It is highly recommended to use Ansible Vault for sensitive data. 
+# If you use plain-text files for secrets (not recommended), add them here:
+# secrets.yml
+# *.vault_pass
+
+# --- Roles and Collections ---
+# If you download roles/collections via requirements.yml, you might want to 
+# ignore the local copies and let others download them during deployment.
+roles/external/
+collections/ansible_collections/
+
+# --- Environment and Logs ---
+*.log
+.venv/
+venv/
+ENV/
+__pycache__/
+*.pyc
+
+# --- Temporary/Editor Files ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
