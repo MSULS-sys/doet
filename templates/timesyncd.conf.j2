@@ -1,0 +1,8 @@
+# /etc/systemd/timesyncd.conf
+# Managed by Ansible — do not edit manually.
+[Time]
+NTP={{ ntp_servers | join(' ') }}
+FallbackNTP={{ ntp_fallback }}
+RootDistanceMaxSec=5
+PollIntervalMinSec=32
+PollIntervalMaxSec=2048

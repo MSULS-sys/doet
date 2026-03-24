@@ -1,0 +1,180 @@
+---
+# =============================================================================
+# Job 1 — create-vms.yml
+# Provision 4 Ubuntu 24.04 VMs on Nutanix via Prism Central (API).
+# Runs on localhost: nutanix.ncp modules act as API clients, no SSH to Nutanix.
+# =============================================================================
+- name: "Provision Nutanix VMs for Doetinchem ESET ICAP"
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/vm_definitions.yml
+
+  vars:
+    # These will be populated from Keeper lookups (no_log tasks)
+    nutanix_username:        ""
+    nutanix_password:        ""
+    sltnadmin_password_hash: ""
+
+  tasks:
+
+    # ── 1. Fetch Nutanix credentials from Keeper ────────────────────────────
+    - name: "Keeper | Fetch Nutanix Prism Central username"
+      ansible.builtin.set_fact:
+        nutanix_username: >-
+          {{ lookup('keeper_security.keeper_secrets_manager.keeper',
+                    keeper_nutanix_record_uid,
+                    field='login') }}
+      no_log: true
+
+    - name: "Keeper | Fetch Nutanix Prism Central password"
+      ansible.builtin.set_fact:
+        nutanix_password: >-
+          {{ lookup('keeper_security.keeper_secrets_manager.keeper',
+                    keeper_nutanix_record_uid,
+                    field='password') }}
+      no_log: true
+
+    # ── 2. Fetch sltnadmin credentials from Keeper ──────────────────────────
+    - name: "Keeper | Fetch sltnadmin password hash"
+      ansible.builtin.set_fact:
+        sltnadmin_password_hash: >-
+          {{ lookup('keeper_security.keeper_secrets_manager.keeper',
+                    keeper_sltnadmin_record_uid,
+                    field='password') }}
+      no_log: true
+
+    # ── 3. Resolve image ext_id ─────────────────────────────────────────────
+    - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
+      nutanix.ncp.ntnx_images_info_v2:
+        nutanix_host:     "{{ nutanix_host }}"
+        nutanix_port:     "{{ nutanix_port }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs:   "{{ nutanix_validate_certs }}"
+        filter: "name eq '{{ vm_image_name }}'"
+      register: image_info
+      no_log: true
+
+    - name: "Assert | Image '{{ vm_image_name }}' was found"
+      ansible.builtin.assert:
+        that: image_info.response | length == 1
+        fail_msg: >-
+          Image '{{ vm_image_name }}' not found or returned multiple results.
+          Found: {{ image_info.response | length }} result(s).
+
+    - name: "Set fact | image_ext_id"
+      ansible.builtin.set_fact:
+        image_ext_id: "{{ image_info.response[0].ext_id }}"
+
+    # ── 4. Resolve subnet ext_id ────────────────────────────────────────────
+    - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
+      nutanix.ncp.ntnx_subnets_info_v2:
+        nutanix_host:     "{{ nutanix_host }}"
+        nutanix_port:     "{{ nutanix_port }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs:   "{{ nutanix_validate_certs }}"
+        filter: "name eq '{{ vm_subnet_name }}'"
+      register: subnet_info
+      no_log: true
+
+    - name: "Assert | Subnet '{{ vm_subnet_name }}' was found"
+      ansible.builtin.assert:
+        that: subnet_info.response | length == 1
+        fail_msg: >-
+          Subnet '{{ vm_subnet_name }}' not found or returned multiple results.
+          Found: {{ subnet_info.response | length }} result(s).
+
+    - name: "Set fact | subnet_ext_id"
+      ansible.builtin.set_fact:
+        subnet_ext_id: "{{ subnet_info.response[0].ext_id }}"
+
+    # ── 5. Render + base64-encode cloud-init per VM ─────────────────────────
+    - name: "Render cloud-init user-data for each VM"
+      ansible.builtin.set_fact:
+        vm_cloud_init_b64: >-
+          {{
+            vm_cloud_init_b64 | default({}) | combine({
+              item.name: lookup('template', 'templates/cloud-init.j2') | b64encode
+            })
+          }}
+      loop: "{{ vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true    # password hash is embedded in rendered template
+
+    # ── 6 + 7. Create VMs and wait for power ON ─────────────────────────────
+    - name: "Nutanix | Create VM '{{ item.name }}' (idempotent)"
+      nutanix.ncp.ntnx_vms_v2:
+        nutanix_host:     "{{ nutanix_host }}"
+        nutanix_port:     "{{ nutanix_port }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs:   "{{ nutanix_validate_certs }}"
+        state: present
+        name:  "{{ item.name }}"
+        description: "ESET ICAP server — SLTN/Doetinchem"
+        num_sockets:      "{{ vm_num_sockets }}"
+        num_cores_per_socket: "{{ vm_cores_per_socket }}"
+        memory_size_bytes: "{{ vm_memory_gb | int * 1024 * 1024 * 1024 }}"
+        power_state: "ON"
+        disks:
+          # OS disk — cloned from cloud image (SCSI index 0)
+          - disk_address:
+              bus_type:    "SCSI"
+              index:       0
+            backing_info:
+              data_source:
+                reference:
+                  ext_id: "{{ image_ext_id }}"
+                  entity_type: "IMAGE"
+            disk_size_bytes: "{{ vm_os_disk_gb | int * 1024 * 1024 * 1024 }}"
+          # Data disk — blank (SCSI index 1)
+          - disk_address:
+              bus_type:    "SCSI"
+              index:       1
+            disk_size_bytes: "{{ vm_data_disk_gb | int * 1024 * 1024 * 1024 }}"
+        nics:
+          - nic_type: "NORMAL_NIC"
+            subnet_reference: "{{ subnet_ext_id }}"
+            network_function_chain_reference: ~
+            ip_endpoint_list:
+              - ip:   "{{ item.ip_address }}"
+                type: "ASSIGNED"
+        guest_customization:
+          config:
+            cloud_init_config:
+              user_data: "{{ vm_cloud_init_b64[item.name] }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: vm_create_results
+      no_log: true
+
+    # ── 7. Poll until power_state == ON ─────────────────────────────────────
+    - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"
+      nutanix.ncp.ntnx_vms_info_v2:
+        nutanix_host:     "{{ nutanix_host }}"
+        nutanix_port:     "{{ nutanix_port }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs:   "{{ nutanix_validate_certs }}"
+        filter: "name eq '{{ item.name }}'"
+      register: vm_poll
+      until: >-
+        vm_poll.response | length > 0 and
+        vm_poll.response[0].power_state == 'ON'
+      retries: 30
+      delay:   20
+      loop: "{{ vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    # ── 8. Pass VM IPs to downstream workflow jobs via set_stats ─────────────
+    - name: "set_stats | Export icap_vm_ips for downstream jobs"
+      ansible.builtin.set_stats:
+        data:
+          icap_vm_ips: "{{ vms | map(attribute='ip_address') | list }}"
+        per_host: false

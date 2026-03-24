@@ -1,0 +1,129 @@
+---
+# =============================================================================
+# Job 2 — general-server-config.yml
+# Post-boot OS hardening and baseline configuration.
+# Runs over SSH as sltnadmin against the 4 newly created VMs.
+# =============================================================================
+- name: "General server configuration — Doetinchem ESET ICAP"
+  hosts: doet_icap
+  gather_facts: true
+  vars_files:
+    - vars/vm_definitions.yml
+  become: true
+
+  handlers:
+    - name: restart systemd-timesyncd
+      ansible.builtin.systemd:
+        name:    systemd-timesyncd
+        state:   restarted
+        enabled: true
+
+  tasks:
+
+    # ── 1. Wait for SSH / cloud-init to finish ──────────────────────────────
+    - name: "Wait | SSH connection is available (timeout 300s)"
+      ansible.builtin.wait_for_connection:
+        timeout:       300
+        connect_timeout: 10
+        sleep:         5
+
+    - name: "Wait | cloud-init finished successfully"
+      ansible.builtin.command: cloud-init status --wait
+      register: ci_status
+      changed_when: false
+      failed_when: "'error' in ci_status.stdout or ci_status.rc != 0"
+
+    # ── 2. Timezone ──────────────────────────────────────────────────────────
+    - name: "Timezone | Ensure timezone is {{ timezone }}"
+      community.general.timezone:
+        name: "{{ timezone }}"
+
+    # ── 3. Purge chrony (systemd-timesyncd is the only NTP client) ───────────
+    - name: "chrony | Check if chrony is installed"
+      ansible.builtin.command: dpkg-query -W -f='${Status}' chrony
+      register: chrony_status
+      changed_when: false
+      failed_when: false
+
+    - name: "chrony | Purge chrony if found"
+      ansible.builtin.apt:
+        name:  chrony
+        state: absent
+        purge: true
+      when: "'install ok installed' in (chrony_status.stdout | default(''))"
+
+    # ── 4. systemd-timesyncd ─────────────────────────────────────────────────
+    - name: "timesyncd | Deploy /etc/systemd/timesyncd.conf"
+      ansible.builtin.template:
+        src:   "{{ playbook_dir }}/templates/timesyncd.conf.j2"
+        dest:  /etc/systemd/timesyncd.conf
+        owner: root
+        group: root
+        mode:  "0644"
+      notify: restart systemd-timesyncd
+
+    - name: "timesyncd | Enable and start systemd-timesyncd"
+      ansible.builtin.systemd:
+        name:    systemd-timesyncd
+        state:   started
+        enabled: true
+        daemon_reload: true
+
+    - name: "timedatectl | Enable NTP synchronization"
+      ansible.builtin.command: timedatectl set-ntp true
+      changed_when: false
+
+    # ── 5. Wait for NTP sync ──────────────────────────────────────────────────
+    - name: "NTP | Wait until NTPSynchronized == yes (max 60s)"
+      ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
+      register: ntp_sync
+      until:    ntp_sync.stdout.strip() == 'yes'
+      retries:  12
+      delay:    5
+      changed_when: false
+
+    # ── 6. Verify /opt/eset mount ────────────────────────────────────────────
+    - name: "Mount | Verify /opt/eset is a valid mountpoint"
+      ansible.builtin.command: mountpoint -q /opt/eset
+      register: eset_mount
+      changed_when: false
+      failed_when:  eset_mount.rc != 0
+
+    # ── 7. APT — update + safe upgrade ───────────────────────────────────────
+    - name: "APT | Update package cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+
+    - name: "APT | Safe upgrade all packages"
+      ansible.builtin.apt:
+        upgrade: safe
+        autoremove: true
+
+    # ── 8. Base packages ──────────────────────────────────────────────────────
+    - name: "APT | Install base packages"
+      ansible.builtin.apt:
+        name:
+          - curl
+          - wget
+          - gnupg2
+          - ca-certificates
+          - ufw
+        state: present
+
+    # ── 9. UFW ────────────────────────────────────────────────────────────────
+    - name: "UFW | Set default incoming policy to deny"
+      community.general.ufw:
+        default:    deny
+        direction:  incoming
+
+    - name: "UFW | Allow SSH (port 22/tcp)"
+      community.general.ufw:
+        rule:    allow
+        port:    "22"
+        proto:   tcp
+        comment: "SSH"
+
+    - name: "UFW | Enable firewall"
+      community.general.ufw:
+        state: enabled

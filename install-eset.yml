@@ -1,0 +1,66 @@
+---
+# =============================================================================
+# Job 3 — install-eset.yml
+# Download and silently install the ESET live installer.
+# Runs over SSH as sltnadmin against the 4 VMs.
+# Idempotent: guarded by creates: /opt/eset (already mounted + has content
+# after first successful install).
+# =============================================================================
+- name: "Install ESET Protection on Doetinchem ICAP servers"
+  hosts: doet_icap
+  gather_facts: false
+  vars_files:
+    - vars/vm_definitions.yml
+  become: true
+
+  tasks:
+
+    # ── 1. Pre-flight: verify /opt/eset is mounted ───────────────────────────
+    - name: "Pre-flight | Verify /opt/eset is a valid mountpoint"
+      ansible.builtin.command: mountpoint -q /opt/eset
+      register: eset_mount_check
+      changed_when: false
+      failed_when:  eset_mount_check.rc != 0
+
+    # ── 2. Download ESET live installer ─────────────────────────────────────
+    - name: "ESET | Download live installer binary to /tmp"
+      ansible.builtin.get_url:
+        url:   "{{ eset_installer_url }}"
+        dest:  "{{ eset_installer_dest }}"
+        mode:  "0755"
+        force: false              # skip re-download if file already present
+      register: eset_download
+
+    # ── 3. Run installer (idempotent via creates: check) ─────────────────────
+    # The live installer drops /opt/eset/... on first run.
+    # If /opt/eset already contains ESET files this task is skipped.
+    - name: "ESET | Run live installer (unattended)"
+      ansible.builtin.command:
+        argv:
+          - "{{ eset_installer_dest }}"
+          - "--accept-license"
+          - "--unattended"
+        creates: "/opt/eset/esets/sbin/eraagent"
+      register: eset_install
+      failed_when: eset_install.rc is defined and eset_install.rc != 0
+
+    # ── 4. Ensure eraagent service is enabled and running ────────────────────
+    - name: "ESET | Enable and start eraagent service"
+      ansible.builtin.systemd:
+        name:    eraagent
+        state:   started
+        enabled: true
+        daemon_reload: true
+
+    # ── 5. Verify eraagent is running ────────────────────────────────────────
+    - name: "ESET | Verify eraagent is in active (running) state"
+      ansible.builtin.command: systemctl is-active eraagent
+      register: eraagent_status
+      changed_when: false
+      failed_when:  eraagent_status.stdout != 'active'
+
+    # ── 6. Clean up installer binary ─────────────────────────────────────────
+    - name: "ESET | Remove installer binary from /tmp"
+      ansible.builtin.file:
+        path:  "{{ eset_installer_dest }}"
+        state: absent
