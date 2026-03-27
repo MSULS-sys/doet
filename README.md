@@ -27,31 +27,36 @@ AWX Workflow Template
 
 ## Project Structure
 
-```
+```text
 doet/
-├── ansible.cfg                   # host_key_checking=False, inventory path, pipelining
-├── inventory/
-│   └── hosts.yml                 # doet_icap group (10.128.8.41–44), ansible_host only
-├── group_vars/
-│   └── doet_icap.yml             # connection, UFW ports, ESET installer vars
-├── templates/
-│   └── cloud-init.j2             # Jinja2 cloud-init template (per-VM, hostname/fqdn derived)
-├── vars/
-│   └── vm_definitions.yml        # Single source of truth: VM list, specs, network, Keeper UIDs
-├── create-vms.yml                # Job 1
-├── general-server-config.yml     # Job 2
-└── install-eset.yml              # Job 3
+├── ansible.cfg                   # host_key_checking=False, production inventory path
+├── collections/
+│   └── requirements.yml          # AWX native collection dependencies
+├── inventories/
+│   └── production/
+│       ├── hosts.yml             # doet_icap group, ansible_host IP assignments
+│       └── group_vars/
+│           ├── all.yml           # (formerly vm_definitions.yml) Single source of truth for VM specs & networks
+│           └── doet_icap.yml     # UFW ports, ESET installer vars
+├── playbooks/
+│   ├── create-vms.yml            # Job 1
+│   ├── general-server-config.yml # Job 2
+│   ├── install-eset.yml          # Job 3
+│   └── templates/
+│       └── cloud-init.j2         # Jinja2 cloud-init template
+├── roles/                        # (Future placeholder for abstracted tasks)
+└── README.md
 ```
 
 ### Variable Ownership
 
 | Namespace | File | Used by |
 |---|---|---|
-| `vm_*` | `vars/vm_definitions.yml` | All three playbooks (via `vars_files`) |
-| `ansible_*`, `eset_*`, `ufw_*` | `group_vars/doet_icap.yml` | Jobs 2 & 3 (SSH plays) |
+| `vm_*` | `inventories/production/group_vars/all.yml` | Auto-loaded for all playbooks assigned to `production` inventory |
+| `ansible_*`, `eset_*`, `ufw_*` | `inventories/production/group_vars/doet_icap.yml` | Auto-loaded for Jobs 2 & 3 |
 | Secrets / Dynamic Vars | AWX at runtime | Injected via Custom Credentials and Surveys |
 
-> `vars/vm_definitions.yml` is the **single source of truth** for all network, hardware, and VM settings. `group_vars/doet_icap.yml` holds only connection and application-level vars that don't belong in the VM definition layer.
+> `group_vars/all.yml` is the **single source of truth** for all network, hardware, and VM settings. `group_vars/doet_icap.yml` holds only connection and application-level vars. Removing `vars_files:` from playbooks in favor of implicit inventory `group_vars` allows you to effortlessly spin up a `staging/` directory in the future without changing a single line of playbook code.
 
 ---
 
@@ -153,11 +158,11 @@ Add a **Survey** to the `doet-create-vms` Job Template with the following prompt
 
 ### 4 — Job Templates
 
-| # | Name                          | Playbook                     | Inventory   | Hosts      |
-|---|-------------------------------|------------------------------|-------------|------------|
-| 1 | `doet-create-vms`             | `create-vms.yml`             | (localhost) | localhost  |
-| 2 | `doet-general-server-config`  | `general-server-config.yml`  | hosts.yml   | doet_icap  |
-| 3 | `doet-install-eset`           | `install-eset.yml`           | hosts.yml   | doet_icap  |
+| # | Name                          | Playbook                     | Inventory    | Hosts      |
+|---|-------------------------------|------------------------------|--------------|------------|
+| 1 | `doet-create-vms`             | `playbooks/create-vms.yml`             | `production` | localhost  |
+| 2 | `doet-general-server-config`  | `playbooks/general-server-config.yml`  | `production` | doet_icap  |
+| 3 | `doet-install-eset`           | `playbooks/install-eset.yml`           | `production` | doet_icap  |
 
 ### 5 — Workflow Template
 
@@ -208,8 +213,8 @@ Create an AWX Workflow Template and chain:
 
 ```bash
 # Lint all playbooks
-ansible-lint create-vms.yml general-server-config.yml install-eset.yml
+ansible-lint playbooks/*.yml
 
-# Dry-run Job 2 against a single host
-ansible-playbook general-server-config.yml --limit doet-gropicap01-test --check
+# Dry-run Job 2 against a single host using the new dynamic inventories structure
+ansible-playbook playbooks/general-server-config.yml --limit doet-gropicap01-test --check
 ```

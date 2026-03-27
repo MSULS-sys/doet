@@ -7,8 +7,7 @@
 - name: "General server configuration — Doetinchem ESET ICAP"
   hosts: doet_icap
   gather_facts: true
-  vars_files:
-    - vars/vm_definitions.yml
+
   become: true
 
 

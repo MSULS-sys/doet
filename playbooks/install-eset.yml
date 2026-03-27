@@ -9,8 +9,7 @@
 - name: "Install ESET Protection on Doetinchem ICAP servers"
   hosts: doet_icap
   gather_facts: false
-  vars_files:
-    - vars/vm_definitions.yml
+
   become: true
 
   tasks:

@@ -7,8 +7,7 @@
 - name: "Provision Nutanix VMs for Doetinchem ESET ICAP"
   hosts: localhost
   gather_facts: false
-  vars_files:
-    - vars/vm_definitions.yml
+
 
   # YAML anchor — shared Nutanix auth block reused by every ncp module call.
   # nutanix_username + nutanix_password are injected by the AWX "Nutanix" Custom Credential.
