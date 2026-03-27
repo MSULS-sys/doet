@@ -84,9 +84,19 @@ ansible-galaxy collection install \
   community.general
 ```
 
-### SSH Key
-Place the Ansible SSH private key at `~/.ssh/ansible-key` on the AWX execution
-node (or inject via a standard AWX Machine Credential).
+### 1. The SSH Keypair
+For seamless Ansible provisioning, the pipeline splits your SSH key across two places:
+- **Public Key:** Go to `inventories/production/group_vars/all.yml` and paste the public half of your SSH key into the `sltnadmin_ssh_pubkey` variable. This is perfectly safe to commit to Git. Cloud-init will burn this into the VM's `~/.ssh/authorized_keys` file when it builds.
+- **Private Key:** Do **NOT** commit this! Instead, go into AWX, click **Credentials → Add**, create a regular **Machine** credential, and paste the private key into the form. You will attach this Machine Credential to Jobs 2 and 3.
+
+### 2. The `sltnadmin` Password Hash
+Cloud-init requires a salted `SHA-512` hash of the user's password, rather than cleartext.
+
+To generate this hash safely on any Linux or Mac system, run the following Python command (replace `YourPasswordHere` with your actual secure password):
+```bash
+python3 -c "import crypt; print(crypt.crypt('YourPasswordHere', crypt.mksalt(crypt.METHOD_SHA512)))"
+```
+You will get a long string starting with `$6$`. Copy that entire string — you will paste this into AWX later as the **SLTN Admin Password Hash**.
 
 ---
 
@@ -182,9 +192,11 @@ You must create a Job Template for each playbook manually so AWX knows how to ex
 7. **Credentials:** Attach both the **Nutanix API Runtime Account** and **doet-sltnadmin-hash** Custom Credentials you created in Step 3.
 8. **Save**.
 
-Repeat this process for the other two playbooks:
-- `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`, add SSH/Machine Credentials)
-- `doet-install-eset` (pointing to `playbooks/install-eset.yml`, add SSH/Machine Credentials)
+Repeat this process for the other two playbooks, ensuring you attach your SSH key using standard Machine Credentials instead of Nutanix Auth:
+- `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`)
+   - **Credentials:** Attach the standard **Machine Credential** you made in the Prerequisites containing your private SSH key.
+- `doet-install-eset` (pointing to `playbooks/install-eset.yml`)
+   - **Credentials:** Attach the standard **Machine Credential** containing your private SSH key.
 
 ### 6 — Dynamic Targets via AWX Surveys
 
