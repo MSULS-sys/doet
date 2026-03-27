@@ -17,7 +17,7 @@ nutanix_validate_certs: false
 # ── Source image & subnet ─────────────────────────────────────────────────
 # The playbook automatically resolves these human-readable names into Nutanix UUIDs.
 # You can override these via AWX Survey drop-downs at execution time.
-vm_image_name:  "ubuntu-24.04-server-cloudimg-amd64"
+vm_image_name:  "noble-server-cloudimg-amd64.img"
 vm_subnet_name: "NFSC-VLAN779"
 
 
