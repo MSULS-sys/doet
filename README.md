@@ -219,11 +219,25 @@ Because you have multiple Nutanix servers and may want to pick images flexibly, 
 
 ### 7 — Workflow Template
 
-Create an AWX Workflow Template to chain the execution together:
-```
-[doet-create-vms] ──on success──► [doet-general-server-config] ──on success──► [doet-install-eset]
-```
-`set_stats` in Job 1 natively exports the dynamic IPs for downstream visibility in the Workflow.
+A **Workflow Job Template** connects your standalone Job Templates together so they run automatically in sequence.
+
+1. Go to **Templates → Add → Add Workflow Job Template**.
+2. **Name:** `Doetinchem ESET Deployment Pipeline`
+3. Select your **Organization** and click **Save**.
+4. The **Workflow Visualizer** will automatically open. This is where you draw the sequence.
+5. Click **Start**, then select the `doet-create-vms` Job Template from the list, and click **Save**.
+6. Hover over the `doet-create-vms` node you just placed, and click the **(+)** icon to add the next step.
+   - Set the **Run Type** condition to **On Success**.
+   - Select the `doet-general-server-config` Job Template and click **Save**.
+7. Hover over the `doet-general-server-config` node, click **(+)**, and set the **Run Type** condition to **On Success**.
+   - Select the `doet-install-eset` Job Template and click **Save**.
+8. Once your visualizer looks like a chain of 3 linked boxes, click **Save** at the top right to close the visualizer.
+
+When you click **Launch** on your Workflow Template, it will:
+1. Fire Job 1 to create the servers.
+2. Natively export checking statuses and the IP endpoints (`set_stats`).
+3. Fire Job 2 completely autonomously using SSH.
+4. Fire Job 3 completely autonomously to deploy the final Software.
 
 ---
 
