@@ -11,12 +11,6 @@
     - vars/vm_definitions.yml
   become: true
 
-  handlers:
-    - name: restart systemd-timesyncd
-      ansible.builtin.systemd:
-        name:    systemd-timesyncd
-        state:   restarted
-        enabled: true
 
   tasks:
 
@@ -34,9 +28,9 @@
       failed_when: "'error' in ci_status.stdout or ci_status.rc != 0"
 
     # ── 2. Timezone ──────────────────────────────────────────────────────────
-    - name: "Timezone | Ensure timezone is {{ timezone }}"
+    - name: "Timezone | Ensure timezone is {{ vm_timezone }}"
       community.general.timezone:
-        name: "{{ timezone }}"
+        name: "{{ vm_timezone }}"
 
     # ── 3. Purge chrony (systemd-timesyncd is the only NTP client) ───────────
     - name: "chrony | Check if chrony is installed"
@@ -52,28 +46,7 @@
         purge: true
       when: "'install ok installed' in (chrony_status.stdout | default(''))"
 
-    # ── 4. systemd-timesyncd ─────────────────────────────────────────────────
-    - name: "timesyncd | Deploy /etc/systemd/timesyncd.conf"
-      ansible.builtin.template:
-        src:   "{{ playbook_dir }}/templates/timesyncd.conf.j2"
-        dest:  /etc/systemd/timesyncd.conf
-        owner: root
-        group: root
-        mode:  "0644"
-      notify: restart systemd-timesyncd
-
-    - name: "timesyncd | Enable and start systemd-timesyncd"
-      ansible.builtin.systemd:
-        name:    systemd-timesyncd
-        state:   started
-        enabled: true
-        daemon_reload: true
-
-    - name: "timedatectl | Enable NTP synchronization"
-      ansible.builtin.command: timedatectl set-ntp true
-      changed_when: false
-
-    # ── 5. Wait for NTP sync ──────────────────────────────────────────────────
+    # ── 4. Wait for NTP sync ───────────────────────────────────────────
     - name: "NTP | Wait until NTPSynchronized == yes (max 60s)"
       ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
       register: ntp_sync
@@ -117,12 +90,13 @@
         default:    deny
         direction:  incoming
 
-    - name: "UFW | Allow SSH (port 22/tcp)"
+    - name: "UFW | Allow required ports"
       community.general.ufw:
         rule:    allow
-        port:    "22"
-        proto:   tcp
-        comment: "SSH"
+        port:    "{{ item.port }}"
+        proto:   "{{ item.proto }}"
+        comment: "{{ item.comment }}"
+      loop: "{{ ufw_allow_ports }}"
 
     - name: "UFW | Enable firewall"
       community.general.ufw:

@@ -1,34 +1,40 @@
 ---
 # ---------------------------------------------------------------------------
 # VM Definitions — Doetinchem ESET ICAP project
-# Non-secret variables only. Secrets are always pulled from Keeper at runtime.
+# Non-secret variables only. Secrets (Nutanix credentials, sltnadmin password
+# hash) are injected at runtime by AWX Custom Credential Types as extra_vars.
+# Single source of truth for all VM + network config.
 # ---------------------------------------------------------------------------
 
-# ── Nutanix / Prism Central ────────────────────────────────────────────────
-nutanix_host:    "prism-central.doetinchem.nl"   # FQDN/IP of Prism Central
-nutanix_port:    9440
-nutanix_timeout: 60
+# ── Nutanix / Prism Central ───────────────────────────────────────────────
+# These are default values. In a multi-cluster environment, prompt for
+# nutanix_host dynamically using an AWX Survey (extra_vars).
+nutanix_host:           "prism-central.doetinchem.nl" 
+nutanix_port:           9440
+nutanix_timeout:        60
 nutanix_validate_certs: false
 
-# ── Source image & subnet ──────────────────────────────────────────────────
+# ── Source image & subnet ─────────────────────────────────────────────────
+# The playbook automatically resolves these human-readable names into Nutanix UUIDs.
+# You can override these via AWX Survey drop-downs at execution time.
 vm_image_name:  "ubuntu-24.04-server-cloudimg-amd64"
 vm_subnet_name: "NFSC-VLAN779"
 
-# ── Keeper record UIDs (non-secret — just identifiers) ────────────────────
-keeper_nutanix_record_uid:  "XXXXXXXXXXXXXXXXXXXX"   # Prism Central login/password
-keeper_sltnadmin_record_uid: "YYYYYYYYYYYYYYYYYYYY"  # sltnadmin password hash + SSH pubkey
 
-# ── Global VM hardware spec ───────────────────────────────────────────────
-vm_num_sockets:   2
-vm_cores_per_socket: 3
-vm_memory_gb:    24
-vm_os_disk_gb:   50    # SCSI index 0 — cloned from image
-vm_data_disk_gb: 300   # SCSI index 1 — blank, mounted on /opt/eset
+# ── VM hardware spec — byte values pre-computed to avoid inline math ──────
+vm_num_sockets:       2
+vm_cores_per_socket:  3
+vm_memory_gb:         24
+vm_os_disk_gb:        50    # SCSI index 0 — cloned from image
+vm_data_disk_gb:      300   # SCSI index 1 — blank, mounted on /opt/eset
 
-# ── Network defaults ──────────────────────────────────────────────────────
-vm_netmask:  "255.255.255.0"    # /24
-vm_prefix:   24
-vm_gateway:  "10.128.8.1"
+vm_memory_bytes:   "{{ (vm_memory_gb   | int) * 1073741824 }}"
+vm_os_disk_bytes:  "{{ (vm_os_disk_gb  | int) * 1073741824 }}"
+vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
+
+# ── Network ───────────────────────────────────────────────────────────────
+vm_prefix:       24
+vm_gateway:      "10.128.8.1"
 vm_dns:
   - "10.128.8.3"
   - "10.128.8.4"
@@ -36,32 +42,25 @@ vm_ntp:
   - "10.128.8.3"
   - "10.128.8.4"
 vm_ntp_fallback: "ntp.ubuntu.com"
-vm_timezone: "Europe/Amsterdam"
-vm_locale:   "en_US.UTF-8"
-vm_domain:   "doetinchem.nl"
+vm_timezone:     "Europe/Amsterdam"
+vm_locale:       "en_US.UTF-8"
+vm_domain:       "doetinchem.nl"
 
-# ── sltnadmin SSH pubkey (non-secret — this is the public half) ─────────
+# ── sltnadmin SSH pubkey (non-secret — public half only) ─────────────────
 sltnadmin_ssh_pubkey: >-
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILo9IWw+pPdf8iXI0s5TCRZkAwSB6OD0+4n0U+KzOjQI
 
-# ── VM list ───────────────────────────────────────────────────────────────
+# ── VM list — hostname and fqdn are derived from name + domain ────────────
+# hostname == name; fqdn == name + '.' + vm_domain
 vms:
-  - name:       "doet-gropicap01-test"
-    hostname:   "doet-gropicap01-test"
-    fqdn:       "doet-gropicap01-test.doetinchem.nl"
+  - name: "doet-gropicap01-test"
     ip_address: "10.128.8.41"
 
-  - name:       "doet-gropicap02-test"
-    hostname:   "doet-gropicap02-test"
-    fqdn:       "doet-gropicap02-test.doetinchem.nl"
+  - name: "doet-gropicap02-test"
     ip_address: "10.128.8.42"
 
-  - name:       "doet-gropicap03-test"
-    hostname:   "doet-gropicap03-test"
-    fqdn:       "doet-gropicap03-test.doetinchem.nl"
+  - name: "doet-gropicap03-test"
     ip_address: "10.128.8.43"
 
-  - name:       "doet-gropicap04-test"
-    hostname:   "doet-gropicap04-test"
-    fqdn:       "doet-gropicap04-test.doetinchem.nl"
+  - name: "doet-gropicap04-test"
     ip_address: "10.128.8.44"

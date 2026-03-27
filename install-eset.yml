@@ -29,7 +29,6 @@
         dest:  "{{ eset_installer_dest }}"
         mode:  "0755"
         force: false              # skip re-download if file already present
-      register: eset_download
 
     # ── 3. Run installer (idempotent via creates: check) ─────────────────────
     # The live installer drops /opt/eset/... on first run.

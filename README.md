@@ -1,8 +1,9 @@
 # doet — Nutanix VM Provisioning + ESET Deployment
 
 Automated infrastructure pipeline for **SLTN → Doetinchem (ESET ICAP)** built
-entirely with **Ansible / AWX**. No Terraform, no Vault — secrets are managed
-exclusively by **Keeper Secrets Manager**.
+entirely with **Ansible / AWX**. All secrets (Prism credentials, sltnadmin data)
+and dynamic targets (Nutanix host, Image Name) are natively injected straight
+into the playbooks by AWX without needing third-party vault plugins in the code.
 
 ---
 
@@ -16,7 +17,7 @@ AWX Workflow Template
 │         └─ 4× Ubuntu 24.04 VMs with cloud-init
 │
 ├── Job 2 ── general-server-config.yml   (hosts: doet_icap, SSH)
-│    └─ OS baseline: timezone, NTP, UFW, apt upgrade
+│    └─ OS baseline: timezone, NTP verify, UFW, apt upgrade
 │
 └── Job 3 ── install-eset.yml            (hosts: doet_icap, SSH)
      └─ Download + unattended ESET install, enable eraagent
@@ -28,31 +29,40 @@ AWX Workflow Template
 
 ```
 doet/
-├── ansible.cfg                   # host_key_checking=False, inventory path
+├── ansible.cfg                   # host_key_checking=False, inventory path, pipelining
 ├── inventory/
-│   └── hosts.yml                 # doet_icap group (10.128.8.41–44)
+│   └── hosts.yml                 # doet_icap group (10.128.8.41–44), ansible_host only
 ├── group_vars/
-│   └── doet_icap.yml             # non-secret group vars
+│   └── doet_icap.yml             # connection, UFW ports, ESET installer vars
 ├── templates/
-│   ├── cloud-init.j2             # Jinja2 cloud-init template (per VM)
-│   └── timesyncd.conf.j2         # systemd-timesyncd config template
+│   └── cloud-init.j2             # Jinja2 cloud-init template (per-VM, hostname/fqdn derived)
 ├── vars/
-│   └── vm_definitions.yml        # VM list, specs, network, Keeper UIDs
+│   └── vm_definitions.yml        # Single source of truth: VM list, specs, network, Keeper UIDs
 ├── create-vms.yml                # Job 1
 ├── general-server-config.yml     # Job 2
 └── install-eset.yml              # Job 3
 ```
 
+### Variable Ownership
+
+| Namespace | File | Used by |
+|---|---|---|
+| `vm_*` | `vars/vm_definitions.yml` | All three playbooks (via `vars_files`) |
+| `ansible_*`, `eset_*`, `ufw_*` | `group_vars/doet_icap.yml` | Jobs 2 & 3 (SSH plays) |
+| Secrets / Dynamic Vars | AWX at runtime | Injected via Custom Credentials and Surveys |
+
+> `vars/vm_definitions.yml` is the **single source of truth** for all network, hardware, and VM settings. `group_vars/doet_icap.yml` holds only connection and application-level vars that don't belong in the VM definition layer.
+
 ---
 
 ## VM Specifications
 
-| VM Name                  | IP           | CPU           | RAM   | OS Disk | Data Disk       |
-|--------------------------|--------------|---------------|-------|---------|-----------------|
-| doet-gropicap01-test     | 10.128.8.41  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset|
-| doet-gropicap02-test     | 10.128.8.42  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset|
-| doet-gropicap03-test     | 10.128.8.43  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset|
-| doet-gropicap04-test     | 10.128.8.44  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset|
+| VM Name                  | IP           | CPU           | RAM   | OS Disk | Data Disk        |
+|--------------------------|--------------|---------------|-------|---------|------------------|
+| doet-gropicap01-test     | 10.128.8.41  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap02-test     | 10.128.8.42  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap03-test     | 10.128.8.43  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap04-test     | 10.128.8.44  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
 
 **Network:** subnet `NFSC-VLAN779` · gateway `10.128.8.1` · DNS `10.128.8.3/4` ·
 NTP `10.128.8.3/4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
@@ -66,71 +76,96 @@ NTP `10.128.8.3/4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
 ```bash
 ansible-galaxy collection install \
   nutanix.ncp:2.4.0 \
-  keeper_security.keeper_secrets_manager \
   community.general
 ```
 
 ### SSH Key
-
 Place the Ansible SSH private key at `~/.ssh/ansible-key` on the AWX execution
-node (or inject via AWX Machine Credential).
-
-### Keeper Secrets Manager — Record UIDs
-
-Update `vars/vm_definitions.yml` with the real Keeper record UIDs:
-
-```yaml
-keeper_nutanix_record_uid:   "XXXXXXXXXXXXXXXXXXXX"   # Prism Central login/password
-keeper_sltnadmin_record_uid: "YYYYYYYYYYYYYYYYYYYY"   # sltnadmin SHA-512 hash + SSH pubkey
-```
-
-The **sltnadmin** Keeper record must contain:
-- `field: password` → SHA-512 password hash (e.g. from `openssl passwd -6`)
-- `field: keyPair`  → SSH public key (ed25519)
+node (or inject via a standard AWX Machine Credential).
 
 ---
 
 ## AWX Setup
 
-### 1 — Custom Credential Type (Keeper)
+Rather than hardcoding credentials or using lookup plugins in the playbook, we instruct AWX to natively inject secrets into the playbook's execution memory as `extra_vars`. 
+
+### 1 — Custom Credential Type (Nutanix Auth)
+Create an AWX Custom Credential Type that securely injects the Prism Central credentials into `nutanix_username` and `nutanix_password`
 
 **Input configuration (YAML)**
 ```yaml
 fields:
-  - id: ksm_config
+  - id: nutanix_user
+    label: Nutanix Username
     type: string
-    label: KSM Config Token
+  - id: nutanix_pass
+    label: Nutanix Password
+    type: string
     secret: true
 required:
-  - ksm_config
+  - nutanix_user
+  - nutanix_pass
 ```
 
 **Injector configuration (YAML)**
 ```yaml
-env:
-  KSM_CONFIG: "{{ ksm_config }}"
+extra_vars:
+  nutanix_username: "{% raw %}{{ nutanix_user }}{% endraw %}"
+  nutanix_password: "{% raw %}{{ nutanix_pass }}{% endraw %}"
+```
+*(You will bind this credential to the `doet-create-vms` Job Template).*
+
+### 2 — Custom Credential Type (SLTN Admin)
+Create another Custom Credential Type for the `sltnadmin` password hash.
+
+**Input configuration (YAML)**
+```yaml
+fields:
+  - id: sltnadmin_hash
+    label: SLTN Admin Password Hash
+    type: string
+    secret: true
+required:
+  - sltnadmin_hash
 ```
 
-### 2 — Job Templates
+**Injector configuration (YAML)**
+```yaml
+extra_vars:
+  sltnadmin_password_hash: "{% raw %}{{ sltnadmin_hash }}{% endraw %}"
+```
+*(You will bind this credential to the `doet-create-vms` Job Template).*
 
-| # | Name                        | Playbook                     | Inventory  | Hosts      |
-|---|-----------------------------|------------------------------|------------|------------|
-| 1 | `doet-create-vms`           | `create-vms.yml`             | (localhost)| localhost  |
-| 2 | `doet-general-server-config`| `general-server-config.yml`  | hosts.yml  | doet_icap  |
-| 3 | `doet-install-eset`         | `install-eset.yml`           | hosts.yml  | doet_icap  |
+### 3 — Dynamic Targets via AWX Surveys
+Because you have multiple Nutanix servers and may want to pick images flexibly, you can override the defaults in `vars/vm_definitions.yml` dynamically:
 
-All three Job Templates attach:
-- The **Keeper Custom Credential** (injects `KSM_CONFIG`)
-- The **Machine Credential** referencing `~/.ssh/ansible-key`
+Add a **Survey** to the `doet-create-vms` Job Template with the following prompts:
+1. **Target Nutanix Host**
+   - **Answer Variable Name:** `nutanix_host`
+   - **Question Type:** Multiple Choice
+   - **Choices:** `prism-1.doetinchem.nl`, `prism-2.doetinchem.nl`
+2. **Base Image Name**
+   - **Answer Variable Name:** `vm_image_name`
+   - **Question Type:** Text
+   - *(Note: You only need the human-readable image name. The playbook dynamically resolves this into the Prism UUID.)*
+3. **Target Subnet**
+   - **Answer Variable Name:** `vm_subnet_name`
 
-### 3 — Workflow Template
+### 4 — Job Templates
+
+| # | Name                          | Playbook                     | Inventory   | Hosts      |
+|---|-------------------------------|------------------------------|-------------|------------|
+| 1 | `doet-create-vms`             | `create-vms.yml`             | (localhost) | localhost  |
+| 2 | `doet-general-server-config`  | `general-server-config.yml`  | hosts.yml   | doet_icap  |
+| 3 | `doet-install-eset`           | `install-eset.yml`           | hosts.yml   | doet_icap  |
+
+### 5 — Workflow Template
 
 Create an AWX Workflow Template and chain:
 ```
 [doet-create-vms] ──on success──► [doet-general-server-config] ──on success──► [doet-install-eset]
 ```
-
-`set_stats` in Job 1 exports `icap_vm_ips` for downstream visibility.
+`set_stats` in Job 1 natively exports the dynamic IPs for downstream visibility in the Workflow.
 
 ---
 
@@ -140,31 +175,32 @@ Create an AWX Workflow Template and chain:
 |----------------|----------|
 | Static IP      | Native `network:` key (Network Config v2) — **not** `write_files` + `netplan apply` |
 | Gateway        | `routes: [{to: default, via: ...}]` — `gateway4` is **forbidden** in Ubuntu 24.04 |
-| NTP            | Native `ntp:` key with `ntp_client: systemd-timesyncd` |
+| NTP            | Native `ntp:` key with `ntp_client: systemd-timesyncd` — single source of truth |
 | chrony         | Must be **absent** (purged in Job 2 if found) |
-| Data disk      | `/dev/sdb` formatted ext4, UUID-based fstab entry with `nofail`, mounted at `/opt/eset` |
+| Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
+| hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
 
 ---
 
 ## Idempotency
 
-| Stage         | Guard |
-|---------------|-------|
-| VM creation   | `ntnx_vms_v2 state: present` |
-| ESET install  | `creates: /opt/eset/esets/sbin/eraagent` |
-| UFW rules     | `community.general.ufw` is idempotent |
-| timesyncd     | Handler only restarts on config change |
+| Stage          | Guard |
+|----------------|-------|
+| VM creation    | `ntnx_vms_v2 state: present` |
+| Disk format    | `fs_setup overwrite: false` |
+| ESET install   | `creates: /opt/eset/esets/sbin/eraagent` |
+| UFW rules      | `community.general.ufw` is idempotent |
 
 ---
 
 ## Security Notes
 
-- `no_log: true` is applied to **every task** that touches fetched secrets.
-- Secrets are **never written to disk** — only held in Ansible facts for the play duration.
-- `ansible-vault` is **not used** — Keeper replaces it entirely.
+- `no_log: true` on **every task** that touches fetched secrets.
+- Secrets are **never written to disk** — they are seamlessly passed into Ansible memory space via AWX Custom Credentials.
+- `ansible-vault` is **not needed** — AWX manages the encrypted at-rest states natively.
 - SSH password auth is **disabled** (`ssh_pwauth: false` in cloud-init).
 - Root login is **disabled** (`disable_root: true` in cloud-init).
-- UFW default-deny is applied **before** ESET installation runs.
+- UFW default-deny inbound (ports 22 + 1344 allowed) applied **before** ESET installation.
 
 ---
 
