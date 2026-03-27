@@ -141,7 +141,23 @@ extra_vars:
 ```
 *(You will bind this credential to the `doet-create-vms` Job Template).*
 
-### 3 — Setup Inventory
+### 3 — Create the Actual Credentials
+Creating the _Credential Type_ only creates a blueprint. You must now use those blueprints to input your actual secrets.
+
+1. Go to **Credentials → Add**.
+2. **Name:** `Nutanix API Runtime Account` (or similar)
+3. **Credential Type:** Click the magnifying glass and select the **Nutanix Auth** type you made in Step 1.
+4. Fill in the **Nutanix Username** and **Nutanix Password** fields that appear.
+5. Click **Save**.
+
+Repeat this process for the **sltnadmin** hash:
+1. Go to **Credentials → Add**.
+2. **Name:** `doet-sltnadmin-hash`
+3. **Credential Type:** Select the **SLTN Admin** type you made in Step 2.
+4. Input the long SHA-512 password hash.
+5. Click **Save**.
+
+### 4 — Setup Inventory
 
 Syncing the Git project only downloads the files. You must create an Inventory to tell AWX where to look for variables.
 
@@ -153,7 +169,7 @@ Syncing the Git project only downloads the files. You must create an Inventory t
 6. Check **Overwrite** and **Update on Launch**, then **Save & Sync**.
 *(This automatically injects `group_vars/all.yml` and `hosts.yml` into your AWX runs).*
 
-### 4 — Create Job Templates
+### 5 — Create Job Templates
 
 You must create a Job Template for each playbook manually so AWX knows how to execute them.
 
@@ -163,14 +179,14 @@ You must create a Job Template for each playbook manually so AWX knows how to ex
 4. **Inventory:** Select the `doet-production` inventory you just created.
 5. **Project:** Select your synced Git project.
 6. **Playbook:** Click the drop-down and select `playbooks/create-vms.yml`.
-7. **Credentials:** Attach both the **Nutanix Auth** and **SLTN Admin** Custom Credentials you made in steps 1 & 2.
+7. **Credentials:** Attach both the **Nutanix API Runtime Account** and **doet-sltnadmin-hash** Custom Credentials you created in Step 3.
 8. **Save**.
 
 Repeat this process for the other two playbooks:
 - `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`, add SSH/Machine Credentials)
 - `doet-install-eset` (pointing to `playbooks/install-eset.yml`, add SSH/Machine Credentials)
 
-### 5 — Dynamic Targets via AWX Surveys
+### 6 — Dynamic Targets via AWX Surveys
 
 Because you have multiple Nutanix servers and may want to pick images flexibly, you can override the defaults using a **Survey**.
 
@@ -189,7 +205,7 @@ Because you have multiple Nutanix servers and may want to pick images flexibly, 
      - **Answer Variable Name:** `vm_subnet_name`
 4. **Save** the questions, and ensure you flip the toggle to **Survey Enabled** at the top right of the screen!
 
-### 6 — Workflow Template
+### 7 — Workflow Template
 
 Create an AWX Workflow Template to chain the execution together:
 ```
