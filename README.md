@@ -141,32 +141,57 @@ extra_vars:
 ```
 *(You will bind this credential to the `doet-create-vms` Job Template).*
 
-### 3 — Dynamic Targets via AWX Surveys
-Because you have multiple Nutanix servers and may want to pick images flexibly, you can override the defaults in `vars/vm_definitions.yml` dynamically:
+### 3 — Setup Inventory
 
-Add a **Survey** to the `doet-create-vms` Job Template with the following prompts:
-1. **Target Nutanix Host**
-   - **Answer Variable Name:** `nutanix_host`
-   - **Question Type:** Multiple Choice
-   - **Choices:** `prism-1.doetinchem.nl`, `prism-2.doetinchem.nl`
-2. **Base Image Name**
-   - **Answer Variable Name:** `vm_image_name`
-   - **Question Type:** Text
-   - *(Note: You only need the human-readable image name. The playbook dynamically resolves this into the Prism UUID.)*
-3. **Target Subnet**
-   - **Answer Variable Name:** `vm_subnet_name`
+Syncing the Git project only downloads the files. You must create an Inventory to tell AWX where to look for variables.
 
-### 4 — Job Templates
+1. Go to **Inventories** → **Add → Add Inventory**. Name it `doet-production` and **Save**.
+2. Go to the **Sources** tab inside the new inventory and click **Add**.
+3. Name it `doet-production-source`.
+4. **Source:** Select `Project`, then select your synced Git project.
+5. **Inventory file:** Select the `inventories/production/` folder from the drop-down.
+6. Check **Overwrite** and **Update on Launch**, then **Save & Sync**.
+*(This automatically injects `group_vars/all.yml` and `hosts.yml` into your AWX runs).*
 
-| # | Name                          | Playbook                     | Inventory    | Hosts      |
-|---|-------------------------------|------------------------------|--------------|------------|
-| 1 | `doet-create-vms`             | `playbooks/create-vms.yml`             | `production` | localhost  |
-| 2 | `doet-general-server-config`  | `playbooks/general-server-config.yml`  | `production` | doet_icap  |
-| 3 | `doet-install-eset`           | `playbooks/install-eset.yml`           | `production` | doet_icap  |
+### 4 — Create Job Templates
 
-### 5 — Workflow Template
+You must create a Job Template for each playbook manually so AWX knows how to execute them.
 
-Create an AWX Workflow Template and chain:
+1. Go to **Templates → Add → Add Job Template**.
+2. **Name:** `doet-create-vms`
+3. **Job Type:** Run
+4. **Inventory:** Select the `doet-production` inventory you just created.
+5. **Project:** Select your synced Git project.
+6. **Playbook:** Click the drop-down and select `playbooks/create-vms.yml`.
+7. **Credentials:** Attach both the **Nutanix Auth** and **SLTN Admin** Custom Credentials you made in steps 1 & 2.
+8. **Save**.
+
+Repeat this process for the other two playbooks:
+- `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`, add SSH/Machine Credentials)
+- `doet-install-eset` (pointing to `playbooks/install-eset.yml`, add SSH/Machine Credentials)
+
+### 5 — Dynamic Targets via AWX Surveys
+
+Because you have multiple Nutanix servers and may want to pick images flexibly, you can override the defaults using a **Survey**.
+
+1. Open the `doet-create-vms` Job Template you just saved.
+2. Click the **Survey** tab at the top.
+3. Click **Add** to add the following prompts:
+   - **Target Nutanix Host**
+     - **Answer Variable Name:** `nutanix_host`
+     - **Question Type:** Multiple Choice (Single Select)
+     - **Choices:** `prism-1.doetinchem.nl`, `prism-2.doetinchem.nl`
+   - **Base Image Name**
+     - **Answer Variable Name:** `vm_image_name`
+     - **Question Type:** Text
+     - *(Note: You only need the human-readable image name. The playbook dynamically resolves this into the Prism UUID.)*
+   - **Target Subnet**
+     - **Answer Variable Name:** `vm_subnet_name`
+4. **Save** the questions, and ensure you flip the toggle to **Survey Enabled** at the top right of the screen!
+
+### 6 — Workflow Template
+
+Create an AWX Workflow Template to chain the execution together:
 ```
 [doet-create-vms] ──on success──► [doet-general-server-config] ──on success──► [doet-install-eset]
 ```
