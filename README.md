@@ -225,11 +225,25 @@ Rather than creating 6 duplicate playbooks for Test and Prod, you only need to c
 7. **Credentials:** Attach both the **Nutanix API Runtime Account** and **doet-sltnadmin-hash** Custom Credentials you created in Step 3.
 8. **Save**.
 
-Repeat this process for the other two playbooks, ensuring you check the **Prompt on launch** box next to Inventory every time:
-- `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`)
-   - **Credentials:** Attach the standard **Machine Credential** you made in the Prerequisites containing your private SSH key.
-- `doet-install-eset` (pointing to `playbooks/install-eset.yml`)
-   - **Credentials:** Attach the standard **Machine Credential** containing your private SSH key.
+**Now, create the second Job Template:**
+1. Go to **Templates → Add → Add Job Template**.
+2. **Name:** `doet-general-server-config`
+3. **Job Type:** Run
+4. **Inventory:** Select `doet-test` (as a placeholder), and **CHECK the "Prompt on Launch" box** next to the Inventory field.
+5. **Project:** Select your synced Git project.
+6. **Playbook:** Select `playbooks/general-server-config.yml`.
+7. **Credentials:** Attach the standard **Machine Credential** you made in the Prerequisites containing your private SSH key.
+8. **Save**.
+
+**Finally, create the third Job Template:**
+1. Go to **Templates → Add → Add Job Template**.
+2. **Name:** `doet-install-eset`
+3. **Job Type:** Run
+4. **Inventory:** Select `doet-test` (as a placeholder), and **CHECK the "Prompt on Launch" box** next to the Inventory field.
+5. **Project:** Select your synced Git project.
+6. **Playbook:** Select `playbooks/install-eset.yml`.
+7. **Credentials:** Attach the standard **Machine Credential** containing your private SSH key.
+8. **Save**.
 
 ### 6 — Dynamic Targets via AWX Surveys
 
@@ -302,6 +316,56 @@ After you hit Next:
 | chrony         | Must be **absent** (purged in Job 2 if found) |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
+
+---
+
+## Post-Deployment ICAP Configuration
+
+Once the Ansible pipeline finishes, the servers are built, firewalled, and running ESET. However, ICAP must be manually activated on both ends to connect them.
+
+### 1. Activating ICAP on ESET
+By default, ESET Server Security for Linux installs with the ICAP service turned off. You must enable it via your ESET PROTECT central console (recommended) or the local WebGUI:
+1. Log into your **ESET PROTECT** console.
+2. Select your newly deployed linux servers (`doet-gropicap...`) or their group.
+3. Edit their Configuration Policy.
+4. Navigate to **Server** → **ICAP**.
+5. Toggle **Enable ICAP server** to **On**.
+6. Ensure the listening port is set to `1344` (this is the port we automatically allowed through UFW via Ansible).
+7. Apply the policy. ESET will now listen on port 1344 for incoming files.
+
+### 2. Connecting Nutanix Files to ESET (Prism Central)
+Now you must tell your Nutanix File Server to send files to your new ESET machines for virus scanning.
+1. Log into **Prism Central**.
+2. Navigate to **Infrastructure** → **Storage** → **File Server** (this may vary slightly depending on your AOS/PC version).
+3. Select the target File Server and click **Update** (or select it and click **Antivirus**).
+4. Navigate to the **Antivirus** or **ICAP** configuration tab.
+5. Check the box to **Enable Antivirus**.
+6. Under **ICAP Servers**, click **+ Add ICAP Server**.
+7. Input the IP addresses of your deployed VMs (e.g., `10.128.40.31` through `.34` for Prod) and Port `1344`.
+8. Check the box to allow Nutanix to block/quarantine infected files based on ESET's response.
+9. Click **Save / Update**. Nutanix will verify the connection to the ESET VMs.
+
+---
+
+## Expanding Disks in the Future
+
+Both disks are designed to be trivially expandable if you ever run low on space!
+
+### Expanding the OS Disk (50GB)
+The Ubuntu cloud image is built with `growpart` natively active!
+1. Go into Prism Central.
+2. Edit the VM and increase the OS **Disk 1** (SCSI 0) size (e.g., to 80GB).
+3. **Reboot the VM**. Cloud-init will automatically detect the new space, grow the partition, and expand the filesystem during boot. No manual CLI work required!
+
+### Expanding the `/opt/eset` Disk (300GB)
+Because the Ansible playbook formats this secondary disk as a raw `ext4` filesystem directly onto `/dev/sdb` (without creating rigid partition boundaries), expanding it is incredibly easy.
+1. Go into Prism Central.
+2. Edit the VM and increase the ESET **Disk 2** (SCSI 1) size (e.g., to 500GB).
+3. SSH into the VM and run exactly **one command**:
+   ```bash
+   sudo resize2fs /dev/sdb
+   ```
+It instantly grabs 100% of the newly added Nutanix space natively.
 
 ---
 
