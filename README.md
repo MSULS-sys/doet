@@ -67,7 +67,7 @@ doet/
 
 ## Test Environment Specifications
 
-**Prism Central URL:** [doet-gropntxcl01.doetinchem-sc.sltncloud.local](https://doet-gropntxcl01.doetinchem-sc.sltncloud.local:9440) (adjustable via survey/vars)
+**Prism Central URL:** [slcd-waatnpc01.dpb.sltncloud.local](https://slcd-waatnpc01.dpb.sltncloud.local:9440) (adjustable via survey/vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
@@ -76,7 +76,7 @@ doet/
 | doet-gropicap03-test     | 10.128.8.43    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
 | doet-gropicap04-test     | 10.128.8.44    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
 
-**Network:** subnet `NFSC-VLAN779` (`7421ee02-9b91-4a57-946b-b91f756fedb9`) · gateway `10.128.8.1` · DNS `10.128.8.3 / 10.128.8.4` ·
+**Network:** subnet `SBHP-Servers` (`7421ee02-9b91-4a57-946b-b91f756fedb9`) · gateway `10.128.8.1` · DNS `10.128.8.3 / 10.128.8.4` ·
 NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
 
 **Nutanix UUIDs (Test):**
