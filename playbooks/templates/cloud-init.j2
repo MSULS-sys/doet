@@ -90,7 +90,7 @@ write_files:
     permissions: "0644"
     content: |
       ++ SLTN Cloud Linux ++
-      Managed by cloud-init
+      Managed by cloud-init and AWX
 
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
@@ -109,4 +109,4 @@ runcmd:
   - systemctl restart systemd-timesyncd
   - timedatectl set-ntp true
   # Birth certificate
-  - "date > /etc/birth-certificate"
+  - "date '+%A, %dth %B %Y at %H:%M:%S %Z in {{ vm_timezone }}' > /etc/birth-certificate"
