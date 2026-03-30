@@ -1,19 +1,17 @@
 ---
 # =============================================================================
 # Job 2 — general-server-config.yml
-# Post-boot OS hardening and baseline configuration.
+# Post-boot OS baseline configuration and baseline configuration.
 # Runs over SSH as sltnadmin against the 4 newly created VMs.
 # =============================================================================
 - name: "General server configuration — Doetinchem ESET ICAP"
   hosts: doet_icap
   gather_facts: true
-
   become: true
-
 
   tasks:
 
-    # ── 1. Wait for SSH / cloud-init to finish ──────────────────────────────
+    # ── Wait for SSH / cloud-init to finish ──────────────────────────────────
     - name: "Wait | SSH connection is available (timeout 300s)"
       ansible.builtin.wait_for_connection:
         timeout:       300
@@ -26,26 +24,12 @@
       changed_when: false
       failed_when: "'error' in ci_status.stdout or ci_status.rc != 0"
 
-    # ── 2. Timezone ──────────────────────────────────────────────────────────
+    # ── Timezone ─────────────────────────────────────────────────────────────
     - name: "Timezone | Ensure timezone is {{ vm_timezone }}"
       community.general.timezone:
         name: "{{ vm_timezone }}"
 
-    # ── 3. Purge chrony (systemd-timesyncd is the only NTP client) ───────────
-    - name: "chrony | Check if chrony is installed"
-      ansible.builtin.command: dpkg-query -W -f='${Status}' chrony
-      register: chrony_status
-      changed_when: false
-      failed_when: false
-
-    - name: "chrony | Purge chrony if found"
-      ansible.builtin.apt:
-        name:  chrony
-        state: absent
-        purge: true
-      when: "'install ok installed' in (chrony_status.stdout | default(''))"
-
-    # ── 4. Wait for NTP sync ───────────────────────────────────────────
+    # ── NTP Sync ─────────────────────────────────────────────────────────────
     - name: "NTP | Wait until NTPSynchronized == yes (max 60s)"
       ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
       register: ntp_sync
@@ -54,14 +38,14 @@
       delay:    5
       changed_when: false
 
-    # ── 6. Verify /opt/eset mount ────────────────────────────────────────────
+    # ── Verify Mounts ────────────────────────────────────────────────────────
     - name: "Mount | Verify /opt/eset is a valid mountpoint"
       ansible.builtin.command: mountpoint -q /opt/eset
       register: eset_mount
       changed_when: false
       failed_when:  eset_mount.rc != 0
 
-    # ── 7. APT — update + upgrade ────────────────────────────────────────────
+    # ── APT Update & Upgrade ─────────────────────────────────────────────────
     - name: "APT | Update package cache"
       ansible.builtin.apt:
         update_cache: true
@@ -73,7 +57,7 @@
         autoremove: true
         purge: true
 
-    # ── 8. Nutanix Guest Tools (NGT) ──────────────────────────────────────────
+    # ── Nutanix Guest Tools (NGT) ───────────────────────────────────────────
     - name: "NGT | Check if NGT is already installed"
       ansible.builtin.stat:
         path: /usr/local/sbin/ngt_cli
@@ -99,22 +83,16 @@
             path: /mnt
             state: unmounted
 
-    # ── 9. Base packages ──────────────────────────────────────────────────────
+    # ── Base Packages ────────────────────────────────────────────────────────
     - name: "APT | Install base packages"
       ansible.builtin.apt:
         name:
-          - curl
-          - wget
           - gnupg2
-          - ca-certificates
-          - ufw
-          - byobu
-          - tcpdump
           - glances
-          - htop
+          - multitail
         state: present
 
-    # ── 10. UFW ────────────────────────────────────────────────────────────────
+    # ── UFW Firewall ─────────────────────────────────────────────────────────
     - name: "UFW | Set default incoming policy to deny"
       community.general.ufw:
         default:    deny

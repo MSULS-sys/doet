@@ -329,7 +329,6 @@ After you hit Next:
 | Static IP      | Native `network:` key (Network Config v2) — **not** `write_files` + `netplan apply` |
 | Gateway        | `routes: [{to: default, via: ...}]` — `gateway4` is **forbidden** in Ubuntu 24.04 |
 | NTP            | Native `ntp:` key with `ntp_client: systemd-timesyncd` — single source of truth |
-| chrony         | Must be **absent** (purged in Job 2 if found) |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
 
