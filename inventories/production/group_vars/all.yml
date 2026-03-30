@@ -9,7 +9,7 @@
 # ── Nutanix / Prism Central ───────────────────────────────────────────────
 # These are default values. In a multi-cluster environment, prompt for
 # nutanix_host dynamically using an AWX Survey (extra_vars).
-nutanix_host:           "prism-central.doetinchem.nl" 
+nutanix_host:           "doet-gropnpc01.doetinchem-sc.sltncloud.local" 
 nutanix_port:           9440
 nutanix_timeout:        60
 nutanix_validate_certs: false

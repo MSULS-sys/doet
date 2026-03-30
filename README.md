@@ -83,7 +83,7 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 
 ## Production Environment Specifications
 
-**Prism Central URL:** `prism-central.doetinchem.nl` (adjustable via survey/vars)
+**Prism Central URL:** `doet-gropnpc01.doetinchem-sc.sltncloud.local:9440` (adjustable via survey/vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
@@ -175,20 +175,24 @@ extra_vars:
 *(You will bind this credential to the `doet-create-vms` Job Template).*
 
 ### 3 — Create the Actual Credentials
-Creating the _Credential Type_ only creates a blueprint. You must now use those blueprints to input your actual secrets.
 
+Creating the _Credential Type_ only creates a blueprint. You must now use those blueprints to input your actual secrets. Since the test and production environments have different credentials, you should create one for each.
+
+**For the Test Environment:**
 1. Go to **Credentials → Add**.
-2. **Name:** `Nutanix API Runtime Account` (or similar)
-3. **Credential Type:** Click the magnifying glass and select the **Nutanix Auth** type you made in Step 1.
-4. Fill in the **Nutanix Username** and **Nutanix Password** fields that appear.
+2. **Name:** `Nutanix API - Test`
+3. **Credential Type:** Select **Nutanix Auth**.
+4. Fill in the **Nutanix Username** and **Nutanix Password** for the test environment.
 5. Click **Save**.
 
-Repeat this process for the **sltnadmin** hash:
+**For the Production Environment:**
 1. Go to **Credentials → Add**.
-2. **Name:** `doet-sltnadmin-hash`
-3. **Credential Type:** Select the **SLTN Admin** type you made in Step 2.
-4. Input the long SHA-512 password hash.
+2. **Name:** `Nutanix API - Production`
+3. **Credential Type:** Select **Nutanix Auth**.
+4. Fill in the **Nutanix Username** and **Nutanix Password** for the production environment.
 5. Click **Save**.
+
+Repeat this process for the **sltnadmin** hash (create one for each environment if they differ, or one if it's the same).
 
 ### 4 — Setup Inventories (Test & Production)
 
@@ -222,7 +226,10 @@ Rather than creating 6 duplicate playbooks for Test and Prod, you only need to c
 4. **Inventory:** Select `doet-test` (as a placeholder), but immediately click the **Prompt on Launch** checkbox right next to it! This ensures AWX asks you whether to deploy to Test or Prod.
 5. **Project:** Select your synced Git project.
 6. **Playbook:** Click the drop-down and select `playbooks/create-vms.yml`.
-7. **Credentials:** Attach both the **Nutanix API Runtime Account** and **doet-sltnadmin-hash** Custom Credentials you created in Step 3.
+7. **Credentials:** 
+   - Click the glass and select **BOTH** the `Nutanix API` and `sltnadmin-hash` categories.
+   - For each one, **CHECK the "Prompt on Launch" box** right next to the category label.
+   - (Alternatively, you can select specific ones as defaults, but checking Prompt ensures you always select the right one for the chosen environment).
 8. **Save**.
 
 **Now, create the second Job Template:**
@@ -294,9 +301,10 @@ A **Workflow Job Template** connects your standalone Job Templates together so t
    - Select the `doet-install-eset` Job Template and click **Save**.
 8. Once your visualizer looks like a chain of 3 linked boxes, click **Save** at the top right to close the visualizer.
 
-When you click **Launch** on your Workflow Template, AWX will ask you two things:
+When you click **Launch** on your Workflow Template, AWX will ask you three things:
 1. **Which Inventory?** — Choose either the `doet-production` or `doet-test` inventory. Everything else (subnets, IPs, hostnames) is instantly loaded from the `group_vars` linked to that choice! 
-2. **Survey Prompts** — It will ask you for the `vm_image_name`.
+2. **Which Credentials?** — Choose the Nutanix and sltnadmin credentials that correspond to the environment you selected in step 1.
+3. **Survey Prompts** — It will ask you for the `vm_image_name` (or `vm_image_uuid`).
 
 After you hit Next:
 1. Fire Job 1 to create the servers.
