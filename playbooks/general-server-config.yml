@@ -192,12 +192,15 @@
           }
 
     # ── Enable fastfetch system-wide ─────────────────────────────────────────
-    - name: "Shell | Enable fastfetch on login (/etc/bash.bashrc)"
-      ansible.builtin.lineinfile:
-        path: /etc/bash.bashrc
-        line: "fastfetch --config /etc/fastfetch.config.jsonc"
-        create: true
-        state: present
+    - name: "Shell | Create profile.d trigger (/etc/profile.d/fastfetch.sh)"
+      ansible.builtin.copy:
+        dest: /etc/profile.d/fastfetch.sh
+        content: |
+          # SLTN Project Dashboard
+          if [ -x /usr/bin/fastfetch ]; then
+              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+          fi
+        mode: "0644"
 
     # ── UFW Firewall ─────────────────────────────────────────────────────────
     - name: "UFW | Set default incoming policy to deny"
