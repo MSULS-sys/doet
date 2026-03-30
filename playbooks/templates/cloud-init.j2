@@ -13,10 +13,10 @@ manage_etc_hosts: true
 locale:   "{{ vm_locale }}"
 timezone: "{{ vm_timezone }}"
 
-# -- Network (Network Config v2 — handled in early network stage) -----------
+# -- Network (Network Config v2 - handled in early network stage) -----------
 # NOTE: gateway4 is deprecated in netplan 0.106+ / Ubuntu 24.04.
 #       Use routes with "to: default" instead.
-# -- NTP (native ntp: key — cloud-init configures systemd-timesyncd) --------
+# -- NTP (native ntp: key - cloud-init configures systemd-timesyncd) --------
 ntp:
   enabled:    true
   ntp_client: systemd-timesyncd
