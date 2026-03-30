@@ -17,7 +17,7 @@ AWX Workflow Template
 │         └─ 4× Ubuntu 24.04 VMs with cloud-init
 │
 ├── Job 2 ── general-server-config.yml   (hosts: doet_icap, SSH)
-│    └─ OS baseline: timezone, NTP verify, UFW, apt upgrade
+│    └─ OS baseline: timezone, NTP verify, Nutanix Guest Tools (NGT), UFW, apt upgrade
 │
 └── Job 3 ── install-eset.yml            (hosts: doet_icap, SSH)
      └─ Download + unattended ESET install, enable eraagent
@@ -81,7 +81,7 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 
 **Nutanix UUIDs (Test):**
 - **Cluster:** `000648fa-6f4b-66b0-60a2-4cd98f907be6`
-- **Base Image:** `adbab1f2-0407-4f93-bb81-fa5365bdfc58` (noble-server-cloudimg-amd64.img)
+- **Base Image:** `29825f72-f2fb-449e-b7aa-9481a955fa2b` (noble-server-cloudimg-amd64.img)
 
 ---
 
@@ -101,7 +101,7 @@ NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/
 
 **Nutanix UUIDs (Production):**
 - **Cluster:** `00062f9b-7a59-04cd-4837-1423f3232900`
-- **Base Image:** `bbeef1f2-6fe3-4e00-87fb-c04b2b6e0d48` (noble-server-cloudimg-amd64.img)
+- **Base Image:** `ed2a849c-5a85-49ed-ad51-c7c1f828334b` (noble-server-cloudimg-amd64.img)
 
 ---
 
@@ -390,6 +390,7 @@ It instantly grabs 100% of the newly added Nutanix space natively.
 |----------------|-------|
 | VM creation    | `ntnx_vms_v2 state: present` |
 | Disk format    | `fs_setup overwrite: false` |
+| NGT install    | `ansible.builtin.stat: /usr/local/sbin/ngt_cli` |
 | ESET install   | `creates: /opt/eset/esets/sbin/eraagent` |
 | UFW rules      | `community.general.ufw` is idempotent |
 
