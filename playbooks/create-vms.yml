@@ -68,8 +68,7 @@
         subnet_ext_id: "{{ vm_subnet_uuid | default(subnet_info.response[0].ext_id) }}"
 
     # ── 3. Render + base64-encode cloud-init per VM ─────────────────────────
-    # fqdn and hostname are derived from item.name + vm_domain — no extra fields needed.
-    - name: "Render cloud-init user-data for each VM"
+    - name: "Render cloud-init for each VM"
       ansible.builtin.set_fact:
         vm_cloud_init_b64: >-
           {{
@@ -80,7 +79,7 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: true    # SHA-512 password hash is embedded in rendered output
+      no_log: true
 
     # ── 4. Create VMs (idempotent via state: present) ───────────────────────
     - name: "Nutanix | Create VM '{{ item.name }}'"

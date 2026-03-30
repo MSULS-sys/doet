@@ -16,19 +16,6 @@ timezone: "{{ vm_timezone }}"
 # ── Network (Network Config v2 — handled in early network stage) ───────────
 # NOTE: gateway4 is deprecated in netplan 0.106+ / Ubuntu 24.04.
 #       Use routes with "to: default" instead.
-network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: false
-      addresses:
-        - "{{ item.ip_address }}/{{ vm_prefix }}"
-      nameservers:
-        addresses: {{ vm_dns | to_json }}
-      routes:
-        - to: default
-          via: "{{ vm_gateway }}"
-
 # ── NTP (native ntp: key — cloud-init configures systemd-timesyncd) ────────
 ntp:
   enabled:    true
@@ -79,6 +66,26 @@ mounts:
 
 # ── Files ────────────────────────────────────────────────────────────────────
 write_files:
+  # Manual Netplan configuration — Bypasses cloud-init schema validation
+  - path:    /etc/netplan/00-cloud-init.yaml
+    permissions: "0600"
+    content: |
+      network:
+        version: 2
+        ethernets:
+          eth0:
+            match:
+              name: "en*"
+            set-name: eth0
+            dhcp4: false
+            addresses:
+              - "{{ item.ip_address }}/{{ vm_prefix }}"
+            nameservers:
+              addresses: {{ vm_dns | to_json }}
+            routes:
+              - to: default
+                via: "{{ vm_gateway }}"
+
   - path:    /etc/motd.d/00-sltn
     permissions: "0644"
     content: |
@@ -87,8 +94,12 @@ write_files:
 
 # ── Run commands ─────────────────────────────────────────────────────────────
 # Network is already configured by cloud-init's network module (runs before runcmd).
-# Do NOT call netplan apply here.
+# However, since we used write_files to bypass schema validation, we must
+# manually trigger netplan apply to activate the custom configuration.
 runcmd:
+  # Activate manual Netplan config
+  - netplan apply
+
   # Locale
   - "locale-gen {{ vm_locale }}"
 

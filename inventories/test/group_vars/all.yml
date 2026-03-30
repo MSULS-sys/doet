@@ -16,7 +16,7 @@ nutanix_validate_certs: false
 
 # ── Source image & subnet ─────────────────────────────────────────────────
 # vm_image_name:  "noble-server-cloudimg-amd64.img"
-vm_image_uuid:  "adbab1f2-0407-4f93-bb81-fa5365bdfc58"
+vm_image_uuid:  "29825f72-f2fb-449e-b7aa-9481a955fa2b"
 
 # vm_subnet_name: "SBHP-Servers"
 vm_subnet_uuid: "7421ee02-9b91-4a57-946b-b91f756fedb9"
