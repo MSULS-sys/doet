@@ -331,6 +331,30 @@ After you hit Next:
 
 ---
 
+## Ansible CLI Usage
+
+While this project is optimized for AWX, you can also execute the provisioning pipeline directly from your local terminal using the Ansible CLI.
+
+### 1. Prerequisites
+Ensure you have the Nutanix collection installed:
+```bash
+ansible-galaxy collection install nutanix.ncp:2.4.0
+```
+
+### 2. Execution
+Since AWX credentials normally inject secrets as `extra_vars`, you must provide your Nutanix credentials and the `sltnadmin` password hash manually using the `-e` flag:
+
+```bash
+ansible-playbook -i inventories/test/hosts.yml playbooks/create-vms.yml \
+  -e "nutanix_username=YOUR_USER" \
+  -e "nutanix_password=YOUR_PASS" \
+  -e "sltnadmin_password_hash='YOUR_HASH'"
+```
+
+*(Note: Replace the placeholders with your actual Prism Central credentials and the SHA-512 hash generated in Step 4.)*
+
+---
+
 ## Cloud-Init Design Decisions
 
 | Topic          | Decision |
