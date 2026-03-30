@@ -69,10 +69,10 @@
     # ── Render & Encode cloud-init ──────────────────────────────────────────
     - name: "Render cloud-init for each VM"
       ansible.builtin.set_fact:
-        vm_cloud_init_b64: >-
+        vm_cloud_init_text: >-
           {{
-            vm_cloud_init_b64 | default({}) | combine({
-              item.name: lookup('template', 'templates/cloud-init.j2') | b64encode
+            vm_cloud_init_text | default({}) | combine({
+              item.name: lookup('template', 'templates/cloud-init.j2')
             })
           }}
       loop: "{{ vms }}"
@@ -117,9 +117,9 @@
               - ip:   "{{ item.ip_address }}"
                 type: "ASSIGNED"
         guest_customization:
-          config:
-            cloud_init_config:
-              user_data: "{{ vm_cloud_init_b64[item.name] }}"
+          type: "cloud_init"
+          is_overridable: false
+          script: "{{ vm_cloud_init_text[item.name] }}"
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
