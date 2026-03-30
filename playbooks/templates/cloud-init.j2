@@ -89,16 +89,8 @@ write_files:
   - path:    /etc/motd.d/00-sltn
     permissions: "0644"
     content: |
-      __________________________________________________
-     /                                                  \
-    |    SLTN CLOUD LINUX - DOETINCHEM ESET ICAP         |
-    |    Provisioned via Nutanix + Cloud-Init + AWX      |
-     \__________________________________________________/
-
-      HOSTNAME:  {{ item.name }}
-      DOMAIN:    {{ vm_domain }}
-      IP ADDR:   {{ item.ip_address }}
-      PROVISIONED: $(cat /etc/birth-certificate 2>/dev/null)
+      ++ SLTN Cloud Linux ++
+      Provisioned via Nutanix
 
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
