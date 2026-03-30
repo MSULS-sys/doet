@@ -190,33 +190,42 @@ Repeat this process for the **sltnadmin** hash:
 4. Input the long SHA-512 password hash.
 5. Click **Save**.
 
-### 4 — Setup Inventory
+### 4 — Setup Inventories (Test & Production)
 
-Syncing the Git project only downloads the files. You must create an Inventory to tell AWX where to look for variables.
+Syncing the Git project only downloads the files. You must create two AWX Inventories so the pipeline knows how to map to both environments cleanly.
 
-1. Go to **Inventories** → **Add → Add Inventory**. Name it `doet-production` and **Save**.
-   *(If you also want to build the test environment, configure a separate inventory called `doet-test` using `inventories/test/`).*
-2. Go to the **Sources** tab inside the new inventory and click **Add**.
-3. Name it `doet-production-source`.
-4. **Source:** Select `Project`, then select your synced Git project.
-5. **Inventory file:** Select the `inventories/production/` folder from the drop-down.
+**First: Create the Test Inventory**
+1. Go to **Inventories** → **Add → Add Inventory**.
+2. **Name:** `doet-test` and click **Save**.
+3. Go to the **Sources** tab inside the new inventory and click **Add**.
+4. **Name:** `test-source`. **Source:** `Project` (Select your synced Git project).
+5. **Inventory file:** Select `inventories/test/` from the drop-down.
 6. Check **Overwrite** and **Update on Launch**, then **Save & Sync**.
-*(This automatically injects `group_vars/all.yml` and `hosts.yml` from that specific environment into your AWX runs).*
+
+**Second: Create the Production Inventory**
+1. Go to **Inventories** → **Add → Add Inventory**.
+2. **Name:** `doet-production` and click **Save**.
+3. Go to the **Sources** tab and click **Add**.
+4. **Name:** `production-source`. **Source:** `Project` (Select your synced Git project).
+5. **Inventory file:** Select `inventories/production/` from the drop-down.
+6. Check **Overwrite** and **Update on Launch**, then **Save & Sync**.
+
+*(AWX can now invisibly swap all hardcoded IPs and specs just by alternating between these two!)*
 
 ### 5 — Create Job Templates
 
-You must create a Job Template for each playbook manually so AWX knows how to execute them.
+Rather than creating 6 duplicate playbooks for Test and Prod, you only need to create **3 Job Templates** and tell AWX to prompt you for the environment!
 
 1. Go to **Templates → Add → Add Job Template**.
 2. **Name:** `doet-create-vms`
 3. **Job Type:** Run
-4. **Inventory:** Select the `doet-production` inventory you just created.
+4. **Inventory:** Select `doet-test` (as a placeholder), but immediately click the **Prompt on Launch** checkbox right next to it! This ensures AWX asks you whether to deploy to Test or Prod.
 5. **Project:** Select your synced Git project.
 6. **Playbook:** Click the drop-down and select `playbooks/create-vms.yml`.
 7. **Credentials:** Attach both the **Nutanix API Runtime Account** and **doet-sltnadmin-hash** Custom Credentials you created in Step 3.
 8. **Save**.
 
-Repeat this process for the other two playbooks, ensuring you attach your SSH key using standard Machine Credentials instead of Nutanix Auth:
+Repeat this process for the other two playbooks, ensuring you check the **Prompt on launch** box next to Inventory every time:
 - `doet-general-server-config` (pointing to `playbooks/general-server-config.yml`)
    - **Credentials:** Attach the standard **Machine Credential** you made in the Prerequisites containing your private SSH key.
 - `doet-install-eset` (pointing to `playbooks/install-eset.yml`)
