@@ -33,23 +33,22 @@ doet/
 ├── collections/
 │   └── requirements.yml          # AWX native collection dependencies
 ├── inventories/
-│   ├── production/               # Production Environment Variables & Hosts
-│   │   ├── hosts.yml             # `doet_icap` production IPs
+│   ├── production/               # Production IPs & UUIDs
+│   │   ├── hosts.yml
 │   │   └── group_vars/
-│   │       ├── all.yml           # Production network & VM specifications
-│   │       └── doet_icap.yml
-│   └── test/                     # Test Environment Variables & Hosts
-│       ├── hosts.yml             # `doet_icap` test IPs
+│   │       └── all.yml
+│   └── test/                     # Test IPs & UUIDs
+│       ├── hosts.yml
 │       └── group_vars/
-│           ├── all.yml           # Test network & VM specifications
-│           └── doet_icap.yml
+│           └── all.yml
 ├── playbooks/
-│   ├── create-vms.yml            # Job 1
-│   ├── general-server-config.yml # Job 2
-│   ├── install-eset.yml          # Job 3
+│   ├── create-vms.yml
+│   ├── general-server-config.yml
+│   ├── install-eset.yml
+│   ├── group_vars/
+│   │   └── doet_icap.yml         # Shared App Config (ESET, UFW, SSH)
 │   └── templates/
-│       └── cloud-init.j2         # Jinja2 cloud-init template
-├── roles/                        # (Future placeholder for abstracted tasks)
+│       └── cloud-init.j2
 └── README.md
 ```
 
@@ -57,11 +56,11 @@ doet/
 
 | Namespace | File | Used by |
 |---|---|---|
-| `vm_*` | `inventories/production/group_vars/all.yml` | Auto-loaded for all playbooks assigned to `production` inventory |
-| `ansible_*`, `eset_*`, `ufw_*` | `inventories/production/group_vars/doet_icap.yml` | Auto-loaded for Jobs 2 & 3 |
+| `vm_*` | `inventories/*/group_vars/all.yml` | Environment-specific network & hardware specs |
+| `ansible_*`, `eset_*`, `ufw_*` | `playbooks/group_vars/doet_icap.yml` | Shared application/OS config for the `doet_icap` group |
 | Secrets / Dynamic Vars | AWX at runtime | Injected via Custom Credentials and Surveys |
 
-> `group_vars/all.yml` is the **single source of truth** for all network, hardware, and VM settings. `group_vars/doet_icap.yml` holds only connection and application-level vars. Removing `vars_files:` from playbooks in favor of implicit inventory `group_vars` allows you to effortlessly spin up a `staging/` directory in the future without changing a single line of playbook code.
+> **Single Source of Truth:** `all.yml` contains only variables that *change* per environment (UUIDs, Subnets, IPs). `doet_icap.yml` contains variables that *remain the same* (UFW ports, ESET installers). This layout keeps the environment folders minimal and easy to clone for new projects.
 
 ---
 

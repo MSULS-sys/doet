@@ -1,10 +1,10 @@
 ---
 # ---------------------------------------------------------------------------
-# Group vars – doet_icap
-# SSH connection, privilege escalation, and application-level settings.
-# Network/system values (NTP, DNS, timezone, locale) live in vars/vm_definitions.yml
-# as vm_* vars, which is the single source of truth for the whole pipeline.
-# Secrets are always fetched at runtime from AWX credentials — never stored here.
+# Group vars – doet_icap (Shared Application Defaults)
+# ---------------------------------------------------------------------------
+# These variables apply to the doet_icap group across ALL environments.
+# To override any of these for a specific environment (e.g., Production),
+# create a file with the same name in inventories/production/group_vars/
 # ---------------------------------------------------------------------------
 
 # ── Connection & privilege escalation ──────────────────────────────────
