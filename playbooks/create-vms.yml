@@ -25,11 +25,11 @@
     # ── Resolve Image ext_id ────────────────────────────────────────────────
     # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
-      nutanix.ncp.ntnx_images_info_v2:
+      nutanix.ncp.ntnx_images_info:
         <<: *ntnx_auth
         filter: "name eq '{{ vm_image_name }}'"
       register: image_info
-      no_log: true
+      no_log: false
       when: vm_image_uuid is not defined
 
     - name: "Assert | Image '{{ vm_image_name }}' was found exactly once"
@@ -47,11 +47,11 @@
     # ── Resolve Subnet ext_id ───────────────────────────────────────────────
     # If the user defines 'vm_subnet_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
-      nutanix.ncp.ntnx_subnets_info_v2:
+      nutanix.ncp.ntnx_subnets_info:
         <<: *ntnx_auth
         filter: "name eq '{{ vm_subnet_name }}'"
       register: subnet_info
-      no_log: true
+      no_log: false
       when: vm_subnet_uuid is not defined
 
     - name: "Assert | Subnet '{{ vm_subnet_name }}' was found exactly once"
@@ -82,7 +82,7 @@
 
     # ── Create Nutanix VMs ──────────────────────────────────────────────────
     - name: "Nutanix | Create VM '{{ item.name }}'"
-      nutanix.ncp.ntnx_vms_v2:
+      nutanix.ncp.ntnx_vms:
         <<: *ntnx_auth
         state:       present
         name:        "{{ item.name }}"
@@ -124,7 +124,7 @@
       loop_control:
         label: "{{ item.name }}"
       register: vm_create_results
-      no_log: true
+      no_log: false
 
     # ── Insert NGT ISO ─────────────────────────────────────────────────────
     - name: "Nutanix | Insert NGT ISO to VM '{{ item.name }}'"
@@ -138,7 +138,7 @@
 
     # ── Wait for Power ON ───────────────────────────────────────────────────
     - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"
-      nutanix.ncp.ntnx_vms_info_v2:
+      nutanix.ncp.ntnx_vms_info:
         <<: *ntnx_auth
         filter: "name eq '{{ item.name }}'"
       register: vm_poll
@@ -150,7 +150,7 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: true
+      no_log: false
 
     # ── Export Artifacts for AWX ────────────────────────────────────────────
     - name: "set_stats | Export icap_vm_ips for downstream jobs"
