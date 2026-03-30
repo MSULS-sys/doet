@@ -86,36 +86,26 @@
         <<: *ntnx_auth
         state:       present
         name:        "{{ item.name }}"
-        description: "ESET ICAP server — SLTN/Doetinchem"
-        num_sockets:          "{{ vm_num_sockets }}"
-        num_cores_per_socket: "{{ vm_cores_per_socket }}"
-        memory_size_bytes:    "{{ vm_memory_bytes }}"
-        cluster_reference:
-          ext_id: "{{ vm_cluster_uuid | default(omit) }}"
-        power_state: "ON"
+        desc:        "ESET ICAP server — SLTN/Doetinchem"
+        vcpus:          "{{ vm_num_sockets }}"
+        cores_per_vcpu: "{{ vm_cores_per_socket }}"
+        memory_gb:      "{{ vm_memory_gb }}"
+        cluster:
+          uuid: "{{ vm_cluster_uuid | default(omit) }}"
         disks:
-          # OS disk — cloned from cloud image (SCSI index 0)
-          - disk_address:
-              bus_type: "SCSI"
-              index:    0
-            backing_info:
-              data_source:
-                reference:
-                  ext_id:      "{{ image_ext_id }}"
-                  entity_type: "IMAGE"
-            disk_size_bytes: "{{ vm_os_disk_bytes }}"
-          # Data disk — blank (SCSI index 1), cloud-init formats + mounts it
-          - disk_address:
-              bus_type: "SCSI"
-              index:    1
-            disk_size_bytes: "{{ vm_data_disk_bytes }}"
-        nics:
-          - nic_type:        "NORMAL_NIC"
-            subnet_reference: "{{ subnet_ext_id }}"
-            network_function_chain_reference: ~
-            ip_endpoint_list:
-              - ip:   "{{ item.ip_address }}"
-                type: "ASSIGNED"
+          - type: "DISK"
+            bus: "SCSI"
+            clone_image:
+              uuid: "{{ image_ext_id }}"
+            size_gb: "{{ vm_os_disk_gb }}"
+          - type: "DISK"
+            bus: "SCSI"
+            size_gb: "{{ vm_data_disk_gb }}"
+        networks:
+          - is_connected: true
+            subnet:
+              uuid: "{{ subnet_ext_id }}"
+            private_ip: "{{ item.ip_address }}"
         guest_customization:
           type: "cloud_init"
           is_overridable: false
@@ -130,7 +120,7 @@
     - name: "Nutanix | Insert NGT ISO to VM '{{ item.name }}'"
       nutanix.ncp.ntnx_vms_ngt_insert_iso_v2:
         <<: *ntnx_auth
-        ext_id: "{{ vm_create_results.results[ansible_loop.index0].response.ext_id }}"
+        ext_id: "{{ vm_create_results.results[ansible_loop.index0].vm_uuid }}"
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
