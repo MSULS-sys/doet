@@ -10,13 +10,12 @@
   become: true
 
   tasks:
-
     # ── Wait for SSH / cloud-init to finish ──────────────────────────────────
     - name: "Wait | SSH connection is available (timeout 300s)"
       ansible.builtin.wait_for_connection:
-        timeout:       300
+        timeout: 300
         connect_timeout: 10
-        sleep:         5
+        sleep: 5
 
     - name: "Wait | cloud-init finished successfully"
       ansible.builtin.command: cloud-init status --wait
@@ -33,9 +32,9 @@
     - name: "NTP | Wait until NTPSynchronized == yes (max 60s)"
       ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
       register: ntp_sync
-      until:    ntp_sync.stdout.strip() == 'yes'
-      retries:  12
-      delay:    5
+      until: ntp_sync.stdout.strip() == 'yes'
+      retries: 12
+      delay: 5
       changed_when: false
 
     # ── Verify Mounts ────────────────────────────────────────────────────────
@@ -43,14 +42,14 @@
       ansible.builtin.command: mountpoint -q /opt/eset
       register: eset_mount
       changed_when: false
-      failed_when:  eset_mount.rc != 0
+      failed_when: eset_mount.rc != 0
 
     # ── APT Tweaks ──────────────────────────────────────────────────────────
     - name: "APT | Apply force-unsafe-io for faster dpkg"
       ansible.builtin.copy:
-        dest:    /etc/dpkg/dpkg.cfg.d/force-unsafe-io
+        dest: /etc/dpkg/dpkg.cfg.d/force-unsafe-io
         content: "force-unsafe-io"
-        mode:    "0644"
+        mode: "0644"
 
     - name: "APT | Configure parallel queue mode and retries"
       ansible.builtin.copy:
@@ -91,14 +90,14 @@
           ansible.builtin.file:
             path: /mnt/nutanix_tools
             state: directory
-            mode: '0755'
+            mode: "0755"
 
         - name: "NGT | Mount the Nutanix ISO"
           ansible.builtin.mount:
-            path:   /mnt/nutanix_tools
-            src:    "{{ ngt_device.stdout.strip() }}"
+            path: /mnt/nutanix_tools
+            src: "{{ ngt_device.stdout.strip() }}"
             fstype: iso9660
-            state:  mounted
+            state: mounted
 
         - name: "NGT | Run the install script"
           ansible.builtin.command: python3 /mnt/nutanix_tools/installer/linux/install_ngt.py --operation install
@@ -107,7 +106,7 @@
 
         - name: "NGT | Unmount and remove from fstab"
           ansible.builtin.mount:
-            path:  /mnt/nutanix_tools
+            path: /mnt/nutanix_tools
             state: absent
 
         - name: "NGT | Remove temporary mount point"
@@ -137,7 +136,7 @@
         \x1b[97m      "888 888          888     888  Y88888
         \x1b[97mY88b  d88P 888          888     888   Y8888
         \x1b[97m "Y8888P"  88888888     888     888    Y888
-        \x1b[38;5;208m━━━━━━━━━━━━━━━━━━\x1b[39m     \x1b[38;5;33m━━━━━━━━━━━━━━━━━━\x1b[39m\x1b[39m
+        \x1b[38;5;208m━━━━━━━━━━━━━━━━━━━\x1b[39m     \x1b[38;5;33m━━━━━━━━━━━━━━━━━━\x1b[39m\x1b[39m
         EOF
       args:
         executable: /bin/bash
@@ -203,14 +202,14 @@
     # ── UFW Firewall ─────────────────────────────────────────────────────────
     - name: "UFW | Set default incoming policy to deny"
       community.general.ufw:
-        default:    deny
-        direction:  incoming
+        default: deny
+        direction: incoming
 
     - name: "UFW | Allow required ports"
       community.general.ufw:
-        rule:    allow
-        port:    "{{ item.port }}"
-        proto:   "{{ item.proto }}"
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
         comment: "{{ item.comment }}"
       loop: "{{ ufw_allow_ports }}"
 
