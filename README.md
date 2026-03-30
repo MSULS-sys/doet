@@ -67,7 +67,7 @@ doet/
 
 ## Test Environment Specifications
 
-**Prism Central URL:** `prism-central.doetinchem.nl` (adjustable via survey/vars)
+**Prism Central URL:** [prism-central.doetinchem.nl](https://prism-central.doetinchem.nl:9440) (adjustable via survey/vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
@@ -83,7 +83,7 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 
 ## Production Environment Specifications
 
-**Prism Central URL:** `doet-gropnpc01.doetinchem-sc.sltncloud.local:9440` (adjustable via survey/vars)
+**Prism Central URL:** [doet-gropnpc01.doetinchem-sc.sltncloud.local](https://doet-gropnpc01.doetinchem-sc.sltncloud.local:9440) (adjustable via survey/vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
