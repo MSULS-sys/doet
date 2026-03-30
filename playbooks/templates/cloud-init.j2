@@ -4,19 +4,19 @@
 # Template: templates/cloud-init.j2
 # ---------------------------------------------------------------------------
 
-# ── Identity ────────────────────────────────────────────────────────────────
+# -- Identity ----------------------------------------------------------------
 hostname: "{{ item.name }}"
 fqdn:     "{{ item.name }}.{{ vm_domain }}"
 manage_etc_hosts: true
 
-# ── Locale & timezone (native cloud-init keys) ─────────────────────────────
+# -- Locale & timezone (native cloud-init keys) -----------------------------
 locale:   "{{ vm_locale }}"
 timezone: "{{ vm_timezone }}"
 
-# ── Network (Network Config v2 — handled in early network stage) ───────────
+# -- Network (Network Config v2 — handled in early network stage) -----------
 # NOTE: gateway4 is deprecated in netplan 0.106+ / Ubuntu 24.04.
 #       Use routes with "to: default" instead.
-# ── NTP (native ntp: key — cloud-init configures systemd-timesyncd) ────────
+# -- NTP (native ntp: key — cloud-init configures systemd-timesyncd) --------
 ntp:
   enabled:    true
   ntp_client: systemd-timesyncd
@@ -26,11 +26,11 @@ ntp:
 {% endfor %}
     - "{{ vm_ntp_fallback }}"
 
-# ── SSH ─────────────────────────────────────────────────────────────────────
+# -- SSH ---------------------------------------------------------------------
 ssh_pwauth:    true
 disable_root:  true
 
-# ── Users ───────────────────────────────────────────────────────────────────
+# -- Users -------------------------------------------------------------------
 users:
   - name:    ubuntu
     groups:  adm
@@ -44,12 +44,12 @@ users:
     shell:   /bin/bash
     sudo:    ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
-    # SHA-512 password hash — injected from AWX credentials at playbook runtime
+    # SHA-512 password hash - injected from AWX credentials at playbook runtime
     passwd:  "{{ sltnadmin_password_hash }}"
     ssh_authorized_keys:
       - "{{ sltnadmin_ssh_pubkey }}"
 
-# ── Disk Setup ─────────────────────────────────────────────────────────────
+# -- Disk Setup -------------------------------------------------------------
 resize_rootfs: true
 growpart:
   mode:    auto
@@ -64,9 +64,9 @@ fs_setup:
 mounts:
   - [ /dev/sdb, /opt/eset, "ext4", "defaults,nofail", "0", "2" ]
 
-# ── Files ────────────────────────────────────────────────────────────────────
+# -- Files --------------------------------------------------------------------
 write_files:
-  # Manual Netplan configuration — Bypasses cloud-init schema validation
+  # Manual Netplan configuration - Bypasses cloud-init schema validation
   - path:    /etc/netplan/00-cloud-init.yaml
     permissions: "0600"
     content: |
@@ -92,7 +92,7 @@ write_files:
       ++ SLTN Cloud Linux ++
       Managed by cloud-init
 
-# ── Run commands ─────────────────────────────────────────────────────────────
+# -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
 # However, since we used write_files to bypass schema validation, we must
 # manually trigger netplan apply to activate the custom configuration.

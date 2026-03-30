@@ -86,7 +86,7 @@
         <<: *ntnx_auth
         state:       present
         name:        "{{ item.name }}"
-        desc:        "ESET ICAP server — SLTN/Doetinchem"
+        desc:        "ESET ICAP server - SLTN/Doetinchem"
         vcpus:          "{{ vm_num_sockets }}"
         cores_per_vcpu: "{{ vm_cores_per_socket }}"
         memory_gb:      "{{ vm_memory_gb }}"
