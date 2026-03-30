@@ -46,23 +46,26 @@
         image_ext_id: "{{ vm_image_uuid | default(image_info.response[0].ext_id) }}"
 
     # ── 2. Resolve subnet ext_id ────────────────────────────────────────────
+    # If the user defines 'vm_subnet_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
       nutanix.ncp.ntnx_subnets_info_v2:
         <<: *ntnx_auth
         filter: "name eq '{{ vm_subnet_name }}'"
       register: subnet_info
       no_log: true
+      when: vm_subnet_uuid is not defined
 
     - name: "Assert | Subnet '{{ vm_subnet_name }}' was found exactly once"
       ansible.builtin.assert:
         that: subnet_info.response | length == 1
         fail_msg: >-
-          Subnet '{{ vm_subnet_name }}' not found or returned multiple results
-          ({{ subnet_info.response | length }} result(s)).
+          Subnet '{{ vm_subnet_name }}' not found. It must exist exactly as named in Prism Central.
+          Alternatively, define 'vm_subnet_uuid' to skip this lookup.
+      when: vm_subnet_uuid is not defined
 
     - name: "Set fact | subnet_ext_id"
       ansible.builtin.set_fact:
-        subnet_ext_id: "{{ subnet_info.response[0].ext_id }}"
+        subnet_ext_id: "{{ vm_subnet_uuid | default(subnet_info.response[0].ext_id) }}"
 
     # ── 3. Render + base64-encode cloud-init per VM ─────────────────────────
     # fqdn and hostname are derived from item.name + vm_domain — no extra fields needed.
@@ -89,6 +92,8 @@
         num_sockets:          "{{ vm_num_sockets }}"
         num_cores_per_socket: "{{ vm_cores_per_socket }}"
         memory_size_bytes:    "{{ vm_memory_bytes }}"
+        cluster_reference:
+          ext_id: "{{ vm_cluster_uuid | default(omit) }}"
         power_state: "ON"
         disks:
           # OS disk — cloned from cloud image (SCSI index 0)

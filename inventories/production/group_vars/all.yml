@@ -17,10 +17,13 @@ nutanix_validate_certs: false
 # ── Source image & subnet ─────────────────────────────────────────────────
 # If exactly resolving by name fails (e.g. if the image is only on a PE cluster or 
 # named differently), you can comment out vm_image_name and provide vm_image_uuid directly.
-vm_image_name:  "noble-server-cloudimg-amd64.img"
-# vm_image_uuid: "put-your-long-uuid-here"
+# vm_image_name:  "noble-server-cloudimg-amd64.img"
+vm_image_uuid:  "bbeef1f2-6fe3-4e00-87fb-c04b2b6e0d48"
 
-vm_subnet_name: "NFSC (VLAN 779)"
+# vm_subnet_name: "NFSC (VLAN 779)"
+vm_subnet_uuid: "e16571d2-0199-4bef-8c06-13525de192db"
+
+vm_cluster_uuid: "00062f9b-7a59-04cd-4837-1423f3232900"
 
 
 # ── VM hardware spec — byte values pre-computed to avoid inline math ──────

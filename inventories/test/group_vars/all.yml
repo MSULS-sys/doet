@@ -15,10 +15,13 @@ nutanix_timeout:        60
 nutanix_validate_certs: false
 
 # ── Source image & subnet ─────────────────────────────────────────────────
-# The playbook automatically resolves these human-readable names into Nutanix UUIDs.
-# You can override these via AWX Survey drop-downs at execution time.
-vm_image_name:  "noble-server-cloudimg-amd64.img"
-vm_subnet_name: "NFSC-VLAN779"
+# vm_image_name:  "noble-server-cloudimg-amd64.img"
+vm_image_uuid:  "adbab1f2-0407-4f93-bb81-fa5365bdfc58"
+
+# vm_subnet_name: "SBHP-Servers"
+vm_subnet_uuid: "7421ee02-9b91-4a57-946b-b91f756fedb9"
+
+vm_cluster_uuid: "000648fa-6f4b-66b0-60a2-4cd98f907be6"
 
 
 # ── VM hardware spec — byte values pre-computed to avoid inline math ──────

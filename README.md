@@ -76,8 +76,12 @@ doet/
 | doet-gropicap03-test     | 10.128.8.43    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
 | doet-gropicap04-test     | 10.128.8.44    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
 
-**Network:** subnet `NFSC-VLAN779` · gateway `10.128.8.1` · DNS `10.128.8.3 / 10.128.8.4` ·
+**Network:** subnet `NFSC-VLAN779` (`7421ee02-9b91-4a57-946b-b91f756fedb9`) · gateway `10.128.8.1` · DNS `10.128.8.3 / 10.128.8.4` ·
 NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+
+**Nutanix UUIDs (Test):**
+- **Cluster:** `000648fa-6f4b-66b0-60a2-4cd98f907be6`
+- **Base Image:** `adbab1f2-0407-4f93-bb81-fa5365bdfc58` (noble-server-cloudimg-amd64.img)
 
 ---
 
@@ -92,8 +96,12 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 | doet-gropicap03-prod     | 10.128.40.33   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
 | doet-gropicap04-prod     | 10.128.40.34   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
 
-**Network:** subnet `NFSC (VLAN 779)` · gateway `10.128.40.1` · DNS `172.20.10.1 / 172.16.10.1` ·
+**Network:** subnet `NFSC (VLAN 779)` (`e16571d2-0199-4bef-8c06-13525de192db`) · gateway `10.128.40.1` · DNS `172.20.10.1 / 172.16.10.1` ·
 NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+
+**Nutanix UUIDs (Production):**
+- **Cluster:** `00062f9b-7a59-04cd-4837-1423f3232900`
+- **Base Image:** `bbeef1f2-6fe3-4e00-87fb-c04b2b6e0d48` (noble-server-cloudimg-amd64.img)
 
 ---
 
