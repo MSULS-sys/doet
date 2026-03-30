@@ -61,18 +61,45 @@
       changed_when: false
       failed_when:  eset_mount.rc != 0
 
-    # ── 7. APT — update + safe upgrade ───────────────────────────────────────
+    # ── 7. APT — update + upgrade ────────────────────────────────────────────
     - name: "APT | Update package cache"
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 0
 
-    - name: "APT | Safe upgrade all packages"
+    - name: "APT | Upgrade all packages"
       ansible.builtin.apt:
-        upgrade: safe
+        upgrade: yes
         autoremove: true
+        purge: true
 
-    # ── 8. Base packages ──────────────────────────────────────────────────────
+    # ── 8. Nutanix Guest Tools (NGT) ──────────────────────────────────────────
+    - name: "NGT | Check if NGT is already installed"
+      ansible.builtin.stat:
+        path: /usr/local/sbin/ngt_cli
+      register: ngt_cli
+
+    - name: "NGT | Install NGT from CD-ROM"
+      when: not ngt_cli.stat.exists
+      block:
+        - name: "NGT | Mount the Nutanix ISO"
+          ansible.builtin.mount:
+            path: /mnt
+            src: /dev/sr0
+            fstype: iso9660
+            state: mounted
+
+        - name: "NGT | Run the install script"
+          ansible.builtin.command: python3 /mnt/installer/linux/install_ngt.py
+          register: ngt_install_output
+          changed_when: "'Installation successful' in ngt_install_output.stdout"
+
+        - name: "NGT | Unmount the Nutanix ISO"
+          ansible.builtin.mount:
+            path: /mnt
+            state: unmounted
+
+    # ── 9. Base packages ──────────────────────────────────────────────────────
     - name: "APT | Install base packages"
       ansible.builtin.apt:
         name:
@@ -87,7 +114,7 @@
           - htop
         state: present
 
-    # ── 9. UFW ────────────────────────────────────────────────────────────────
+    # ── 10. UFW ────────────────────────────────────────────────────────────────
     - name: "UFW | Set default incoming policy to deny"
       community.general.ufw:
         default:    deny

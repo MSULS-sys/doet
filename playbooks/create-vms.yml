@@ -128,7 +128,17 @@
       register: vm_create_results
       no_log: true
 
-    # ── 5. Poll until all VMs report power_state == ON ──────────────────────
+    # ── 5. Insert NGT ISO ──────────────────────────────────────────────────
+    - name: "Nutanix | Insert NGT ISO to VM '{{ item.name }}'"
+      nutanix.ncp.ntnx_vms_ngt_insert_iso_v2:
+        <<: *ntnx_auth
+        ext_id: "{{ vm_create_results.results[ansible_loop.index0].response.ext_id }}"
+      loop: "{{ vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+        extended: true
+
+    # ── 6. Poll until all VMs report power_state == ON ──────────────────────
     - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"
       nutanix.ncp.ntnx_vms_info_v2:
         <<: *ntnx_auth
