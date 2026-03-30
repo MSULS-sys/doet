@@ -4,7 +4,7 @@
 # SSH connection, privilege escalation, and application-level settings.
 # Network/system values (NTP, DNS, timezone, locale) live in vars/vm_definitions.yml
 # as vm_* vars, which is the single source of truth for the whole pipeline.
-# Secrets are always fetched at runtime from Keeper — never stored here.
+# Secrets are always fetched at runtime from AWX credentials — never stored here.
 # ---------------------------------------------------------------------------
 
 # ── Connection & privilege escalation ──────────────────────────────────
