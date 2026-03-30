@@ -46,14 +46,14 @@ disable_root:  true
 # ── Users ───────────────────────────────────────────────────────────────────
 users:
   - name:    ubuntu
-    groups:  sudo
+    groups:  adm
     shell:   /bin/bash
     sudo:    ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
 
   - name:    sltnadmin
     gecos:   "SLTN Admin"
-    groups:  sudo
+    groups:  adm
     shell:   /bin/bash
     sudo:    ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
@@ -61,12 +61,6 @@ users:
     passwd:  "{{ sltnadmin_password_hash }}"
     ssh_authorized_keys:
       - "{{ sltnadmin_ssh_pubkey }}"
-
-# ── Packages ─────────────────────────────────────────────────────────────
-package_update:   true
-package_upgrade:  false
-packages:
-  - qemu-guest-agent
 
 # ── Disk Setup ─────────────────────────────────────────────────────────────
 resize_rootfs: true
@@ -97,9 +91,6 @@ write_files:
 runcmd:
   # Locale
   - "locale-gen {{ vm_locale }}"
-
-  # Guest agent
-  - systemctl enable --now qemu-guest-agent
 
   # RTC / NTP
   - timedatectl set-local-rtc 0 --adjust-system-clock
