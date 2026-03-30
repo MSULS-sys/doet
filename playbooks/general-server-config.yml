@@ -81,22 +81,39 @@
     - name: "NGT | Install NGT from CD-ROM"
       when: not ngt_cli.stat.exists
       block:
+        - name: "NGT | Find the NUTANIX_TOOLS device"
+          ansible.builtin.command: blkid -L NUTANIX_TOOLS
+          register: ngt_device
+          changed_when: false
+          failed_when: ngt_device.rc != 0
+
+        - name: "NGT | Ensure mount point exists"
+          ansible.builtin.file:
+            path: /mnt/nutanix_tools
+            state: directory
+            mode: '0755'
+
         - name: "NGT | Mount the Nutanix ISO"
           ansible.builtin.mount:
-            path: /mnt
-            src: /dev/sr0
+            path:   /mnt/nutanix_tools
+            src:    "{{ ngt_device.stdout.strip() }}"
             fstype: iso9660
-            state: mounted
+            state:  mounted
 
         - name: "NGT | Run the install script"
-          ansible.builtin.command: python3 /mnt/installer/linux/install_ngt.py
+          ansible.builtin.command: python3 /mnt/nutanix_tools/installer/linux/install_ngt.py --operation install
           register: ngt_install_output
           changed_when: "'Installation successful' in ngt_install_output.stdout"
 
-        - name: "NGT | Unmount the Nutanix ISO"
+        - name: "NGT | Unmount and remove from fstab"
           ansible.builtin.mount:
-            path: /mnt
-            state: unmounted
+            path:  /mnt/nutanix_tools
+            state: absent
+
+        - name: "NGT | Remove temporary mount point"
+          ansible.builtin.file:
+            path: /mnt/nutanix_tools
+            state: absent
 
     # ── Base Packages ────────────────────────────────────────────────────────
     - name: "APT | Install base packages"
