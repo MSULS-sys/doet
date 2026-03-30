@@ -45,6 +45,21 @@
       changed_when: false
       failed_when:  eset_mount.rc != 0
 
+    # ── APT Tweaks ──────────────────────────────────────────────────────────
+    - name: "APT | Apply force-unsafe-io for faster dpkg"
+      ansible.builtin.copy:
+        dest:    /etc/dpkg/dpkg.cfg.d/force-unsafe-io
+        content: "force-unsafe-io"
+        mode:    "0644"
+
+    - name: "APT | Configure parallel queue mode and retries"
+      ansible.builtin.copy:
+        dest: /etc/apt.conf.d/99parallel
+        content: |
+          APT::Acquire::Queue-Mode "access";
+          APT::Acquire::Retries 3;
+        mode: "0644"
+
     # ── APT Update & Upgrade ─────────────────────────────────────────────────
     - name: "APT | Update package cache"
       ansible.builtin.apt:
