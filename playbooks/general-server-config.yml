@@ -128,7 +128,7 @@
     - name: "Fastfetch | Create system-wide logo (/etc/fastfetch.logo)"
       ansible.builtin.shell: |
         cat <<'EOF' > /etc/fastfetch.logo
-        \x1b[97m.d8888b.  888      88888888888 888b    888
+        \x1b[97m .d8888b.  888      88888888888 888b    888
         \x1b[97md88P  Y88b 888          888     8888b   888
         \x1b[97mY88b.      888          888     88888b  888
         \x1b[97m "Y888b.   888          888     888Y88b 888
