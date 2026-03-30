@@ -60,7 +60,9 @@ doet/
 | `ansible_*`, `eset_*`, `ufw_*` | `playbooks/group_vars/doet_icap.yml` | Shared application/OS config for the `doet_icap` group |
 | Secrets / Dynamic Vars | AWX at runtime | Injected via Custom Credentials and Surveys |
 
-> **Single Source of Truth:** `all.yml` contains only variables that *change* per environment (UUIDs, Subnets, IPs). `doet_icap.yml` contains variables that *remain the same* (UFW ports, ESET installers). This layout keeps the environment folders minimal and easy to clone for new projects.
+> **Single Source of Truth:** `all.yml` contains only variables that *change* per environment (UUIDs, Subnets, IPs). `doet_icap.yml` contains application variables that *remain the same* (UFW ports, ESET installers). This layout keeps the environment folders minimal and easy to clone for new projects.
+>
+> **Native Precedence:** Ansible allows you to selectively override these shared values. If a specific environment (e.g., Production) ever requires a different SSH private key path or unique ESET URL, simply recreate `doet_icap.yml` inside that environment's `group_vars/` folder. Inventory variables take precedence over playbook-level defaults.
 
 ---
 
