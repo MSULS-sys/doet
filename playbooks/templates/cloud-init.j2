@@ -98,7 +98,7 @@ write_files:
       HOSTNAME:  {{ item.name }}
       DOMAIN:    {{ vm_domain }}
       IP ADDR:   {{ item.ip_address }}
-      PROVISION: $(cat /etc/birth-certificate 2>/dev/null)
+      PROVISIONED: $(cat /etc/birth-certificate 2>/dev/null)
 
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
