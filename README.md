@@ -67,7 +67,7 @@ doet/
 
 ## Test Environment Specifications
 
-**Prism Central URL:** [prism-central.doetinchem.nl](https://prism-central.doetinchem.nl:9440) (adjustable via survey/vars)
+**Prism Central URL:** [doet-gropntxcl01.doetinchem-sc.sltncloud.local](https://doet-gropntxcl01.doetinchem-sc.sltncloud.local:9440) (adjustable via survey/vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
