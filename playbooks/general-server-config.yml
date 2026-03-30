@@ -81,6 +81,10 @@
           - gnupg2
           - ca-certificates
           - ufw
+          - byobu
+          - tcpdump
+          - glances
+          - htop
         state: present
 
     # ── 9. UFW ────────────────────────────────────────────────────────────────

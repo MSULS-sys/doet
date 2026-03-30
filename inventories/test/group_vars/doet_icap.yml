@@ -1,0 +1,25 @@
+---
+# ---------------------------------------------------------------------------
+# Group vars – doet_icap
+# SSH connection, privilege escalation, and application-level settings.
+# Network/system values (NTP, DNS, timezone, locale) live in vars/vm_definitions.yml
+# as vm_* vars, which is the single source of truth for the whole pipeline.
+# Secrets are always fetched at runtime from Keeper — never stored here.
+# ---------------------------------------------------------------------------
+
+# ── Connection & privilege escalation ──────────────────────────────────
+ansible_user:                 sltnadmin
+ansible_ssh_private_key_file: ~/.ssh/ansible-key
+ansible_become:               true
+ansible_become_method:        sudo
+
+# ── ESET ────────────────────────────────────────────────────────────────
+eset_installer_url: >-
+  https://download.liveinstaller.eset.systems/b96dab92-cd6f-1328-c435-5a6319878d9e/epi_lin_live_installer.bin
+eset_install_marker: /opt/eset
+eset_installer_dest: /tmp/epi_lin_live_installer.bin
+
+# ── UFW allowed ports ────────────────────────────────────────────────
+ufw_allow_ports:
+  - { port: "22",   proto: "tcp", comment: "SSH" }
+  - { port: "1344", proto: "tcp", comment: "ESET ICAP Server" }

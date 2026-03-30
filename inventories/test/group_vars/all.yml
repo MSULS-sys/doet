@@ -15,17 +15,15 @@ nutanix_timeout:        60
 nutanix_validate_certs: false
 
 # ── Source image & subnet ─────────────────────────────────────────────────
-# If exactly resolving by name fails (e.g. if the image is only on a PE cluster or 
-# named differently), you can comment out vm_image_name and provide vm_image_uuid directly.
+# The playbook automatically resolves these human-readable names into Nutanix UUIDs.
+# You can override these via AWX Survey drop-downs at execution time.
 vm_image_name:  "noble-server-cloudimg-amd64.img"
-# vm_image_uuid: "put-your-long-uuid-here"
-
-vm_subnet_name: "NFSC (VLAN 779)"
+vm_subnet_name: "NFSC-VLAN779"
 
 
 # ── VM hardware spec — byte values pre-computed to avoid inline math ──────
 vm_num_sockets:       2
-vm_cores_per_socket:  6     # 2 sockets * 6 cores = 12 CPU
+vm_cores_per_socket:  3
 vm_memory_gb:         24
 vm_os_disk_gb:        50    # SCSI index 0 — cloned from image
 vm_data_disk_gb:      300   # SCSI index 1 — blank, mounted on /opt/eset
@@ -36,13 +34,13 @@ vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
 
 # ── Network ───────────────────────────────────────────────────────────────
 vm_prefix:       24
-vm_gateway:      "10.128.40.1"    # Assuming .1 is your gateway for the .40 subnet
+vm_gateway:      "10.128.8.1"
 vm_dns:
-  - "172.20.10.1"
-  - "172.16.10.1"
+  - "10.128.8.3"
+  - "10.128.8.4"
 vm_ntp:
-  - "172.20.10.1"
-  - "172.16.10.1"
+  - "10.128.8.3"
+  - "10.128.8.4"
 vm_ntp_fallback: "ntp.ubuntu.com"
 vm_timezone:     "Europe/Amsterdam"
 vm_locale:       "en_US.UTF-8"
@@ -55,14 +53,14 @@ sltnadmin_ssh_pubkey: >-
 # ── VM list — hostname and fqdn are derived from name + domain ────────────
 # hostname == name; fqdn == name + '.' + vm_domain
 vms:
-  - name: "doet-gropicap01-prod"
-    ip_address: "10.128.40.31"
+  - name: "doet-gropicap01-test"
+    ip_address: "10.128.8.41"
 
-  - name: "doet-gropicap02-prod"
-    ip_address: "10.128.40.32"
+  - name: "doet-gropicap02-test"
+    ip_address: "10.128.8.42"
 
-  - name: "doet-gropicap03-prod"
-    ip_address: "10.128.40.33"
+  - name: "doet-gropicap03-test"
+    ip_address: "10.128.8.43"
 
-  - name: "doet-gropicap04-prod"
-    ip_address: "10.128.40.34"
+  - name: "doet-gropicap04-test"
+    ip_address: "10.128.8.44"

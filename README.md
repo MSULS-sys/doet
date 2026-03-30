@@ -33,11 +33,16 @@ doet/
 ├── collections/
 │   └── requirements.yml          # AWX native collection dependencies
 ├── inventories/
-│   └── production/
-│       ├── hosts.yml             # doet_icap group, ansible_host IP assignments
+│   ├── production/               # Production Environment Variables & Hosts
+│   │   ├── hosts.yml             # `doet_icap` production IPs
+│   │   └── group_vars/
+│   │       ├── all.yml           # Production network & VM specifications
+│   │       └── doet_icap.yml
+│   └── test/                     # Test Environment Variables & Hosts
+│       ├── hosts.yml             # `doet_icap` test IPs
 │       └── group_vars/
-│           ├── all.yml           # (formerly vm_definitions.yml) Single source of truth for VM specs & networks
-│           └── doet_icap.yml     # UFW ports, ESET installer vars
+│           ├── all.yml           # Test network & VM specifications
+│           └── doet_icap.yml
 ├── playbooks/
 │   ├── create-vms.yml            # Job 1
 │   ├── general-server-config.yml # Job 2
@@ -60,17 +65,35 @@ doet/
 
 ---
 
-## VM Specifications
+## Test Environment Specifications
 
-| VM Name                  | IP           | CPU           | RAM   | OS Disk | Data Disk        |
-|--------------------------|--------------|---------------|-------|---------|------------------|
-| doet-gropicap01-test     | 10.128.8.41  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap02-test     | 10.128.8.42  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap03-test     | 10.128.8.43  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap04-test     | 10.128.8.44  | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+**Prism Central URL:** `prism-central.doetinchem.nl` (adjustable via survey/vars)
 
-**Network:** subnet `NFSC-VLAN779` · gateway `10.128.8.1` · DNS `10.128.8.3/4` ·
-NTP `10.128.8.3/4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+| VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
+|--------------------------|----------------|---------------|-------|---------|------------------|
+| doet-gropicap01-test     | 10.128.8.41    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap02-test     | 10.128.8.42    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap03-test     | 10.128.8.43    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap04-test     | 10.128.8.44    | 2s × 3c = 6c  | 24 GB | 50 GB   | 300 GB /opt/eset |
+
+**Network:** subnet `NFSC-VLAN779` · gateway `10.128.8.1` · DNS `10.128.8.3 / 10.128.8.4` ·
+NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+
+---
+
+## Production Environment Specifications
+
+**Prism Central URL:** `prism-central.doetinchem.nl` (adjustable via survey/vars)
+
+| VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
+|--------------------------|----------------|---------------|-------|---------|------------------|
+| doet-gropicap01-prod     | 10.128.40.31   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap02-prod     | 10.128.40.32   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap03-prod     | 10.128.40.33   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap04-prod     | 10.128.40.34   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+
+**Network:** subnet `NFSC (VLAN 779)` · gateway `10.128.40.1` · DNS `172.20.10.1 / 172.16.10.1` ·
+NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
 
 ---
 
@@ -172,12 +195,13 @@ Repeat this process for the **sltnadmin** hash:
 Syncing the Git project only downloads the files. You must create an Inventory to tell AWX where to look for variables.
 
 1. Go to **Inventories** → **Add → Add Inventory**. Name it `doet-production` and **Save**.
+   *(If you also want to build the test environment, configure a separate inventory called `doet-test` using `inventories/test/`).*
 2. Go to the **Sources** tab inside the new inventory and click **Add**.
 3. Name it `doet-production-source`.
 4. **Source:** Select `Project`, then select your synced Git project.
 5. **Inventory file:** Select the `inventories/production/` folder from the drop-down.
 6. Check **Overwrite** and **Update on Launch**, then **Save & Sync**.
-*(This automatically injects `group_vars/all.yml` and `hosts.yml` into your AWX runs).*
+*(This automatically injects `group_vars/all.yml` and `hosts.yml` from that specific environment into your AWX runs).*
 
 ### 5 — Create Job Templates
 
@@ -200,22 +224,36 @@ Repeat this process for the other two playbooks, ensuring you attach your SSH ke
 
 ### 6 — Dynamic Targets via AWX Surveys
 
-Because you have multiple Nutanix servers and may want to pick images flexibly, you can override the defaults using a **Survey**.
+All hardware specs and subnets are hardcoded inside the `inventories/` folders so they perfectly match their environments. The **only** thing we prompt for dynamically is the Image you wish to deploy.
 
 1. Open the `doet-create-vms` Job Template you just saved.
 2. Click the **Survey** tab at the top.
-3. Click **Add** to add the following prompts:
-   - **Target Nutanix Host**
-     - **Answer Variable Name:** `nutanix_host`
-     - **Question Type:** Multiple Choice (Single Select)
-     - **Choices:** `prism-1.doetinchem.nl`, `prism-2.doetinchem.nl`
+3. Click **Add** to add the following prompt:
    - **Base Image Name**
      - **Answer Variable Name:** `vm_image_name`
      - **Question Type:** Text
-     - *(Note: You only need the human-readable image name. The playbook dynamically resolves this into the Prism UUID.)*
-   - **Target Subnet**
-     - **Answer Variable Name:** `vm_subnet_name`
+     - *(Note: The playbook dynamically resolves this into the Prism UUID.)*
+   - **Base Image UUID** (Optional alternative)
+     - **Answer Variable Name:** `vm_image_uuid`
+     - **Question Type:** Text
 4. **Save** the questions, and ensure you flip the toggle to **Survey Enabled** at the top right of the screen!
+5. **CRUCIAL STEP:** Go back to the **Details** tab of the `doet-create-vms` Job Template, click Edit, and check the **Prompt on Launch** checkbox under the "Variables" or "Survey" section.
+
+#### How to find an Image UUID in Nutanix manually
+If the automatic `vm_image_name` lookup fails, you can bypass it using `vm_image_uuid`. Here is how to find your image's exact UUID:
+
+**Method 1: Prism Central Web UI**
+1. Log in to your Prism Central interface.
+2. Navigate to **Compute & Storage** → **Images**.
+3. Click on the name of the image you want to use.
+4. Look at the URL in your browser address bar. It will look like: 
+   `https://prism-central-ip/infrastructure/virtual_infrastructure/images/5d1b...-....-....-....`
+5. The very last string of text in the URL is the UUID (`ext_id`).
+
+**Method 2: Command Line (CVM)**
+1. SSH into any Nutanix CVM as the `nutanix` user.
+2. Run `acli image.list`
+3. Copy the UUID next to the name of your image.
 
 ### 7 — Workflow Template
 
@@ -233,7 +271,11 @@ A **Workflow Job Template** connects your standalone Job Templates together so t
    - Select the `doet-install-eset` Job Template and click **Save**.
 8. Once your visualizer looks like a chain of 3 linked boxes, click **Save** at the top right to close the visualizer.
 
-When you click **Launch** on your Workflow Template, it will:
+When you click **Launch** on your Workflow Template, AWX will ask you two things:
+1. **Which Inventory?** — Choose either the `doet-production` or `doet-test` inventory. Everything else (subnets, IPs, hostnames) is instantly loaded from the `group_vars` linked to that choice! 
+2. **Survey Prompts** — It will ask you for the `vm_image_name`.
+
+After you hit Next:
 1. Fire Job 1 to create the servers.
 2. Natively export checking statuses and the IP endpoints (`set_stats`).
 3. Fire Job 2 completely autonomously using SSH.

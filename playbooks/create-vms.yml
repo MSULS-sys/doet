@@ -24,23 +24,26 @@
   tasks:
 
     # ── 1. Resolve image ext_id ─────────────────────────────────────────────
+    # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
       nutanix.ncp.ntnx_images_info_v2:
         <<: *ntnx_auth
         filter: "name eq '{{ vm_image_name }}'"
       register: image_info
       no_log: true
+      when: vm_image_uuid is not defined
 
     - name: "Assert | Image '{{ vm_image_name }}' was found exactly once"
       ansible.builtin.assert:
         that: image_info.response | length == 1
         fail_msg: >-
-          Image '{{ vm_image_name }}' not found or returned multiple results
-          ({{ image_info.response | length }} result(s)).
+          Image '{{ vm_image_name }}' not found. It must exist exactly as named in Prism Central.
+          Alternatively, define 'vm_image_uuid' to skip this lookup.
+      when: vm_image_uuid is not defined
 
     - name: "Set fact | image_ext_id"
       ansible.builtin.set_fact:
-        image_ext_id: "{{ image_info.response[0].ext_id }}"
+        image_ext_id: "{{ vm_image_uuid | default(image_info.response[0].ext_id) }}"
 
     # ── 2. Resolve subnet ext_id ────────────────────────────────────────────
     - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
