@@ -29,7 +29,7 @@ AWX Workflow Template
 
 ```text
 doet/
-├── ansible.cfg                   # host_key_checking=False, production inventory path
+├── ansible.cfg                   # host_key_checking=False, test inventory path by default
 ├── collections/
 │   └── requirements.yml          # AWX native collection dependencies
 ├── inventories/
@@ -334,9 +334,9 @@ After you hit Next:
 
 | Topic          | Decision |
 |----------------|----------|
-| Static IP      | Native `network:` key (Network Config v2) — **not** `write_files` + `netplan apply` |
+| Static IP      | Custom Netplan via `write_files` + `netplan apply` in `runcmd` (bypasses schema validation) |
 | Gateway        | `routes: [{to: default, via: ...}]` — `gateway4` is **forbidden** in Ubuntu 24.04 |
-| NTP            | Native `ntp:` key with `ntp_client: systemd-timesyncd` — single source of truth |
+| NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
 
