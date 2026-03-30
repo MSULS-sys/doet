@@ -123,10 +123,18 @@ For seamless Ansible provisioning, the pipeline splits your SSH key across two p
 ### 2. The `sltnadmin` Password Hash
 Cloud-init requires a salted `SHA-512` hash of the user's password, rather than cleartext.
 
-To generate this hash safely on any Linux or Mac system, run the following Python command (replace `YourPasswordHere` with your actual secure password):
+To generate this hash safely on any Linux or Mac system, use one of the following methods (replace `YourPasswordHere` with your actual secure password):
+
+**Method A: Python (Universal)**
 ```bash
 python3 -c "import crypt; print(crypt.crypt('YourPasswordHere', crypt.mksalt(crypt.METHOD_SHA512)))"
 ```
+
+**Method B: mkpasswd (Common on Linux)**
+```bash
+echo "YourPasswordHere" | mkpasswd -m sha-512 -s
+```
+
 You will get a long string starting with `$6$`. Copy that entire string — you will paste this into AWX later as the **SLTN Admin Password Hash**.
 
 ---
