@@ -44,7 +44,7 @@ users:
     shell:   /bin/bash
     sudo:    ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
-    # SHA-512 password hash — injected from Keeper at playbook runtime
+    # SHA-512 password hash — injected from AWX credentials at playbook runtime
     passwd:  "{{ sltnadmin_password_hash }}"
     ssh_authorized_keys:
       - "{{ sltnadmin_ssh_pubkey }}"
