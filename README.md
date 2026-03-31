@@ -68,7 +68,7 @@ doet/
 
 ## Test Environment Specifications
 
-**Prism Central URL:** [slcd-waatnpc01.dpb.sltncloud.local](https://slcd-waatnpc01.dpb.sltncloud.local:9440) (adjustable via survey/vars)
+**Prism Central URL:** [slcd-waatnpc01.dpb.sltncloud.local](https://slcd-waatnpc01.dpb.sltncloud.local:9440) (adjustable via vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
@@ -88,7 +88,7 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 
 ## Production Environment Specifications
 
-**Prism Central URL:** [doet-gropnpc01.doetinchem-sc.sltncloud.local](https://doet-gropnpc01.doetinchem-sc.sltncloud.local:9440) (adjustable via survey/vars)
+**Prism Central URL:** [doet-gropnpc01.doetinchem-sc.sltncloud.local](https://doet-gropnpc01.doetinchem-sc.sltncloud.local:9440) (adjustable via vars)
 
 | VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
 |--------------------------|----------------|---------------|-------|---------|------------------|
@@ -116,10 +116,20 @@ ansible-galaxy collection install \
   community.general
 ```
 
-### 1. The SSH Keypair
+### 1. The SSH Key-Pair
+
+Authentication for the `sltnadmin` account should be handled via SSH keys rather than passwords. An **ED25519** key-pair is recommended for its high security and performance.
+
+#### Generate the Key-Pair
+Run this command on your management workstation:
+```bash
+ssh-keygen -t ed25519 -C "sltnadmin@doet-icap" -f ./id_ed25519_sltnadmin
+```
+
+#### Key Placement
 For seamless Ansible provisioning, the pipeline splits your SSH key across two places:
-- **Public Key:** Go to `inventories/production/group_vars/all.yml` and paste the public half of your SSH key into the `sltnadmin_ssh_pubkey` variable. This is perfectly safe to commit to Git. Cloud-init will burn this into the VM's `~/.ssh/authorized_keys` file when it builds.
-- **Private Key:** Do **NOT** commit this! Instead, go into AWX, click **Credentials → Add**, create a regular **Machine** credential, and paste the private key into the form. You will attach this Machine Credential to Jobs 2 and 3.
+-   **Public Key (`id_ed25519_sltnadmin.pub`)**: Copy the contents of this file and paste it into the `sltnadmin_ssh_pubkey` variable in `playbooks/group_vars/all.yml` (or your environment-specific file). Cloud-init will burn this into the VM's `~/.ssh/authorized_keys` file at boot.
+-   **Private Key (`id_ed25519_sltnadmin`)**: **Do NOT commit this to Git!** Instead, upload it as a **Machine Credential** in AWX. You will attach this credential to the configuration and health-check jobs.
 
 ### 2. The `sltnadmin` Password Hash
 Cloud-init requires a salted `SHA-512` hash of the user's password, rather than cleartext.
@@ -171,25 +181,40 @@ extra_vars:
 *(You will bind this credential to the `doet-create-vms` Job Template).*
 
 ### 2 — Custom Credential Type (SLTN Admin)
-Create another Custom Credential Type for the `sltnadmin` password hash.
+
+This credential type securely injects the `sltnadmin` login secrets. It is designed to handle both **SSH Key-based** and **Password-based** authentication, ensuring connectivity even when `ssh_pwauth` is disabled.
 
 **Input configuration (YAML)**
 ```yaml
 fields:
-  - id: sltnadmin_hash
-    label: SLTN Admin Password Hash
+  - id: admin_password
+    label: SLTN Admin Cleartext Password
+    type: string
+    secret: true
+  - id: admin_key
+    label: SLTN Admin SSH Private Key
+    type: string
+    multiline: true
+    secret: true
+  - id: admin_hash
+    label: SLTN Admin Password Hash (SHA-512)
     type: string
     secret: true
 required:
-  - sltnadmin_hash
+  - admin_hash
 ```
 
 **Injector configuration (YAML)**
 ```yaml
 extra_vars:
-  sltnadmin_password_hash: "{% raw %}{{ sltnadmin_hash }}{% endraw %}"
+  ansible_user: "sltnadmin"
+  ansible_password: "{% raw %}{{ admin_password }}{% endraw %}"
+  ansible_ssh_private_key_file: "{% raw %}{{ admin_key }}{% endraw %}"
+  sltnadmin_password_hash: "{% raw %}{{ admin_hash }}{% endraw %}"
 ```
-*(You will bind this credential to the `doet-create-vms` Job Template).*
+
+> [!NOTE]
+> If `ssh_pwauth` is set to `false`, the **SSH Private Key** field must be populated for Ansible to connect. If `true`, the **Cleartext Password** will be used for authentication.
 
 ### 3 — Create the Actual Credentials
 
