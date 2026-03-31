@@ -367,16 +367,24 @@ ansible-galaxy collection install nutanix.ncp:2.4.0
 ```
 
 ### 2. Execution
-Since AWX credentials normally inject secrets as `extra_vars`, you must provide your Nutanix credentials and the `sltnadmin` password hash manually using the `-e` flag:
 
+Since AWX normally injects credentials automatically, you must provide your Nutanix and `sltnadmin` secrets manually:
+
+**Step 1: Provision the VMs (API-only)**
 ```bash
 ansible-playbook -i inventories/test/hosts.yml playbooks/create-vms.yml \
-  -e "nutanix_username=YOUR_USER" \
-  -e "nutanix_password=YOUR_PASS" \
-  -e "sltnadmin_password_hash='YOUR_HASH'"
+  -e "nutanix_username=YOUR_PC_USER" \
+  -e "nutanix_password=YOUR_PC_PASS" \
+  -e "sltnadmin_password_hash='YOUR_SHA512_HASH'"
 ```
 
-*(Note: Replace the placeholders with your actual Prism Central credentials and the SHA-512 hash generated in Step 4.)*
+**Step 2: Configure & Verify (SSH-based)**
+```bash
+ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.yml \
+  --private-key ~/.ssh/id_ed25519_sltnadmin \
+  -u sltnadmin
+```
+*(Note: Replace the placeholders with your actual Prism credentials and the path to the SSH key generated in the Prerequisites section.)*
 
 ---
 
