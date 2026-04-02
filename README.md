@@ -83,6 +83,7 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 **Nutanix UUIDs (Test):**
 - **Cluster:** `000648fa-6f4b-66b0-60a2-4cd98f907be6`
 - **Base Image:** `29825f72-f2fb-449e-b7aa-9481a955fa2b` (noble-server-cloudimg-amd64.img)
+- **Subnet eth0 (SBHP-Servers):** `7421ee02-9b91-4a57-946b-b91f756fedb9`
 
 ---
 
