@@ -68,6 +68,10 @@ mounts:
 # -- Files --------------------------------------------------------------------
 write_files:
   # Manual Netplan configuration - Bypasses cloud-init schema validation
+  # eth0 — internal NIC (Nutanix ↔ ESET only, NFSC VLAN 779)
+  #         No default route. No internet access.
+  # eth1 — external NIC (EPG-DOET-vSphere-DCU, VLAN 0)
+  #         Default route + DNS. Internet access. Ansible SSH target.
   - path:    /etc/netplan/00-cloud-init.yaml
     permissions: "0600"
     content: |
@@ -76,16 +80,25 @@ write_files:
         ethernets:
           eth0:
             match:
-              name: "en*"
+              name: "ens3"
             set-name: eth0
             dhcp4: false
             addresses:
-              - "{{ item.ip_address }}/{{ vm_prefix }}"
+              - "{{ item.ip_address }}/{{ vm_eth0_prefix }}"
+            # Internal only — no default route, no nameservers on this NIC.
+
+          eth1:
+            match:
+              name: "ens4"
+            set-name: eth1
+            dhcp4: false
+            addresses:
+              - "{{ item.eth1_ip }}/{{ vm_eth1_prefix }}"
             nameservers:
               addresses: {{ vm_dns | to_json }}
             routes:
               - to: default
-                via: "{{ vm_gateway }}"
+                via: "{{ vm_eth1_gateway }}"
 
   - path:    /etc/motd.d/00-sltn
     permissions: "0644"

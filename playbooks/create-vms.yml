@@ -44,7 +44,7 @@
       ansible.builtin.set_fact:
         image_ext_id: "{{ vm_image_uuid | default(image_info.response[0].ext_id) }}"
 
-    # ── Resolve Subnet ext_id ───────────────────────────────────────────────
+    # ── Resolve Subnet ext_id (eth0 — internal) ─────────────────────────────
     # If the user defines 'vm_subnet_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
       nutanix.ncp.ntnx_subnets_info:
@@ -62,9 +62,30 @@
           Alternatively, define 'vm_subnet_uuid' to skip this lookup.
       when: vm_subnet_uuid is not defined
 
-    - name: "Set fact | subnet_ext_id"
+    - name: "Set fact | subnet_ext_id (eth0)"
       ansible.builtin.set_fact:
         subnet_ext_id: "{{ vm_subnet_uuid | default(subnet_info.response[0].ext_id) }}"
+
+    # ── Resolve Subnet2 ext_id (eth1 — external / internet-facing) ──────────
+    - name: "Nutanix | Look up subnet2 ext_id for '{{ vm_subnet2_name }}'"
+      nutanix.ncp.ntnx_subnets_info:
+        <<: *ntnx_auth
+        filter: "name eq '{{ vm_subnet2_name }}'"
+      register: subnet2_info
+      no_log: false
+      when: vm_subnet2_uuid is not defined or vm_subnet2_uuid == ""
+
+    - name: "Assert | Subnet2 '{{ vm_subnet2_name }}' was found exactly once"
+      ansible.builtin.assert:
+        that: subnet2_info.response | length == 1
+        fail_msg: >-
+          Subnet '{{ vm_subnet2_name }}' not found. It must exist exactly as named in Prism Central.
+          Alternatively, define 'vm_subnet2_uuid' to skip this lookup.
+      when: vm_subnet2_uuid is not defined or vm_subnet2_uuid == ""
+
+    - name: "Set fact | subnet2_ext_id (eth1)"
+      ansible.builtin.set_fact:
+        subnet2_ext_id: "{{ vm_subnet2_uuid if (vm_subnet2_uuid is defined and vm_subnet2_uuid != '') else subnet2_info.response[0].ext_id }}"
 
     # ── Render & Encode cloud-init ──────────────────────────────────────────
     - name: "Render cloud-init for each VM"
@@ -78,7 +99,7 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: true
+      no_log: false
 
     # ── Create Nutanix VMs ──────────────────────────────────────────────────
     - name: "Nutanix | Create VM '{{ item.name }}'"
@@ -102,10 +123,16 @@
             bus: "SCSI"
             size_gb: "{{ vm_data_disk_gb }}"
         networks:
+          # eth0 — internal NIC (Nutanix ↔ ESET, NFSC VLAN 779, no internet)
           - is_connected: true
             subnet:
               uuid: "{{ subnet_ext_id }}"
             private_ip: "{{ item.ip_address }}"
+          # eth1 — external NIC (EPG-DOET-vSphere-DCU, internet-facing, Ansible SSH)
+          - is_connected: true
+            subnet:
+              uuid: "{{ subnet2_ext_id }}"
+            private_ip: "{{ item.eth1_ip }}"
         guest_customization:
           type: "cloud_init"
           is_overridable: false

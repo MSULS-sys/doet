@@ -90,19 +90,29 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 
 **Prism Central URL:** [doet-gropnpc01.doetinchem-sc.sltncloud.local](https://doet-gropnpc01.doetinchem-sc.sltncloud.local:9440) (adjustable via vars)
 
-| VM Name                  | IP             | CPU           | RAM   | OS Disk | Data Disk        |
-|--------------------------|----------------|---------------|-------|---------|------------------|
-| doet-gropicap01-prod     | 10.128.40.31   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap02-prod     | 10.128.40.32   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap03-prod     | 10.128.40.33   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap04-prod     | 10.128.40.34   | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+> **Dual-NIC layout** — each VM has two network interfaces:
+> - **eth0** (`NFSC VLAN 779`, `10.128.40.x`) — internal only. Traffic between Nutanix and ESET flows here. **No default route. No internet access.**
+> - **eth1** (`DOET:DOET:EPG-DOET-vSphere-DCU VLAN 0`, `10.130.100.x`) — external / internet-facing. Carries the default route (`10.130.100.1`) and all DNS. **Ansible SSH connects on this interface.**
 
-**Network:** subnet `NFSC (VLAN 779)` (`e16571d2-0199-4bef-8c06-13525de192db`) · gateway `10.128.40.1` · DNS `172.20.10.1 / 172.16.10.1` ·
-NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+| VM Name              | eth0 IP (internal) | eth1 IP (external / Ansible) | CPU           | RAM   | OS Disk | Data Disk        |
+|----------------------|--------------------|------------------------------|---------------|-------|---------|------------------|
+| doet-gropicap01-prod | 10.128.40.31       | 10.130.100.191               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap02-prod | 10.128.40.32       | 10.130.100.192               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap03-prod | 10.128.40.33       | 10.130.100.193               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap04-prod | 10.128.40.34       | 10.130.100.194               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+
+**eth0 — Internal Network:**
+Subnet `NFSC (VLAN 779)` (`e16571d2-0199-4bef-8c06-13525de192db`) · no gateway (internal-only) · prefix `/24`
+
+**eth1 — External Network:**
+Subnet `DOET:DOET:EPG-DOET-vSphere-DCU (VLAN 0)` · gateway `10.130.100.1` · prefix `/24`
+DNS `172.20.10.1 / 172.16.10.1` · NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
 
 **Nutanix UUIDs (Production):**
 - **Cluster:** `00062f9b-7a59-04cd-4837-1423f3232900`
 - **Base Image:** `ed2a849c-5a85-49ed-ad51-c7c1f828334b` (noble-server-cloudimg-amd64.img)
+- **Subnet eth0 (NFSC):** `e16571d2-0199-4bef-8c06-13525de192db`
+- **Subnet eth1 (EPG-DOET-vSphere-DCU):** `26d75bac-450c-4f99-99c7-19397cec1807`
 
 ---
 
@@ -402,7 +412,8 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | Topic          | Decision |
 |----------------|----------|
 | Static IP      | Custom Netplan via `write_files` + `netplan apply` in `runcmd` (bypasses schema validation) |
-| Gateway        | `routes: [{to: default, via: ...}]` — `gateway4` is **forbidden** in Ubuntu 24.04 |
+| Dual NIC       | `eth0` = internal only (no route, no DNS) matched on `ens3`; `eth1` = external with default route + DNS matched on `ens4` — both set-name renamed in a single Netplan file |
+| Gateway        | `routes: [{to: default, via: ...}]` on **eth1 only** — `gateway4` is **forbidden** in Ubuntu 24.04 |
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
@@ -431,7 +442,9 @@ Now you must tell your Nutanix File Server to send files to your new ESET machin
 4. Navigate to the **Antivirus** or **ICAP** configuration tab.
 5. Check the box to **Enable Antivirus**.
 6. Under **ICAP Servers**, click **+ Add ICAP Server**.
-7. Input the IP addresses of your deployed VMs (e.g., `10.128.40.31` through `.34` for Prod) and Port `1344`.
+7. Input the **eth0 (internal) IP addresses** of your deployed VMs and Port `1344`:
+   - Nutanix communicates with ESET exclusively over the internal NIC (`eth0`).
+   - Use `10.128.40.31` through `10.128.40.34` for Production (not the eth1 IPs).
 8. Check the box to allow Nutanix to block/quarantine infected files based on ESET's response.
 9. Click **Save / Update**. Nutanix will verify the connection to the ESET VMs.
 

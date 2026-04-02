@@ -4,24 +4,36 @@
 # Non-secret variables only. Secrets (Nutanix credentials, sltnadmin password
 # hash) are injected at runtime by AWX Custom Credential Types as extra_vars.
 # Single source of truth for all VM + network config.
+#
+# NIC layout (production):
+#   eth0 — internal only (Nutanix ↔ ESET), subnet NFSC (VLAN 779)
+#           10.128.40.x — NO default route, NO internet access
+#   eth1 — external / internet-facing, subnet DOET:DOET:EPG-DOET-vSphere-DCU
+#           10.130.100.x — default route via 10.130.100.1, internet access
+#           Ansible SSH connects on this interface.
 # ---------------------------------------------------------------------------
 
 # ── Nutanix / Prism Central ───────────────────────────────────────────────
 # These are default values. In a multi-cluster environment, prompt for
 # nutanix_host dynamically using an AWX Survey (extra_vars).
-nutanix_host:           "doet-gropnpc01.doetinchem-sc.sltncloud.local" 
+nutanix_host:           "doet-gropnpc01.doetinchem-sc.sltncloud.local"
 nutanix_port:           9440
 nutanix_timeout:        60
 nutanix_validate_certs: false
 
-# ── Source image & subnet ─────────────────────────────────────────────────
-# If exactly resolving by name fails (e.g. if the image is only on a PE cluster or 
+# ── Source image & subnets ────────────────────────────────────────────────
+# If exactly resolving by name fails (e.g. if the image is only on a PE cluster or
 # named differently), you can comment out vm_image_name and provide vm_image_uuid directly.
 # vm_image_name:  "noble-server-cloudimg-amd64.img"
 vm_image_uuid:  "ed2a849c-5a85-49ed-ad51-c7c1f828334b"
 
+# eth0 — internal NIC subnet (NFSC, VLAN 779) — Nutanix ↔ ESET only
 # vm_subnet_name: "NFSC (VLAN 779)"
-vm_subnet_uuid: "e16571d2-0199-4bef-8c06-13525de192db"
+vm_subnet_uuid:  "e16571d2-0199-4bef-8c06-13525de192db"
+
+# eth1 — external NIC subnet (EPG-DOET-vSphere-DCU, VLAN 0) — internet-facing
+# vm_subnet2_name: "DOET:DOET:EPG-DOET-vSphere-DCU"
+vm_subnet2_uuid: "26d75bac-450c-4f99-99c7-19397cec1807"
 
 vm_cluster_uuid: "00062f9b-7a59-04cd-4837-1423f3232900"
 
@@ -37,9 +49,13 @@ vm_memory_bytes:   "{{ (vm_memory_gb   | int) * 1073741824 }}"
 vm_os_disk_bytes:  "{{ (vm_os_disk_gb  | int) * 1073741824 }}"
 vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
 
-# ── Network ───────────────────────────────────────────────────────────────
-vm_prefix:       24
-vm_gateway:      "10.128.40.1"    # Assuming .1 is your gateway for the .40 subnet
+# ── Network — eth0 (internal) ─────────────────────────────────────────────
+# No default route — internal-only traffic between Nutanix and ESET.
+vm_eth0_prefix:  24
+
+# ── Network — eth1 (external / internet-facing) ───────────────────────────
+vm_eth1_prefix:  24
+vm_eth1_gateway: "10.130.100.1"
 vm_dns:
   - "172.20.10.1"
   - "172.16.10.1"
@@ -55,17 +71,24 @@ vm_domain:       "doetinchem.nl"
 sltnadmin_ssh_pubkey: >-
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILo9IWw+pPdf8iXI0s5TCRZkAwSB6OD0+4n0U+KzOjQI
 
-# ── VM list — hostname and fqdn are derived from name + domain ────────────
-# hostname == name; fqdn == name + '.' + vm_domain
+# ── VM list — hostname driven by eth1 IP (external NIC) ───────────────────
+# name          — VM hostname (also FQDN prefix)
+# ip_address    — eth0 static IP (internal, NFSC VLAN 779)
+# eth1_ip       — eth1 static IP (external, EPG-DOET-vSphere-DCU)
+#                 This is also the address Ansible SSHes into (ansible_host).
 vms:
-  - name: "doet-gropicap01-prod"
-    ip_address: "10.128.40.31"
+  - name:        "doet-gropicap01-prod"
+    ip_address:  "10.128.40.31"       # eth0 — internal
+    eth1_ip:     "10.130.100.191"     # eth1 — external / Ansible target
 
-  - name: "doet-gropicap02-prod"
-    ip_address: "10.128.40.32"
+  - name:        "doet-gropicap02-prod"
+    ip_address:  "10.128.40.32"
+    eth1_ip:     "10.130.100.192"
 
-  - name: "doet-gropicap03-prod"
-    ip_address: "10.128.40.33"
+  - name:        "doet-gropicap03-prod"
+    ip_address:  "10.128.40.33"
+    eth1_ip:     "10.130.100.193"
 
-  - name: "doet-gropicap04-prod"
-    ip_address: "10.128.40.34"
+  - name:        "doet-gropicap04-prod"
+    ip_address:  "10.128.40.34"
+    eth1_ip:     "10.130.100.194"
