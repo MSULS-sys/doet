@@ -14,14 +14,13 @@
   # All three arrive as extra_vars; no lookup plugin or collection needed.
   vars:
     _ntnx_auth: &ntnx_auth
-      nutanix_host:     "{{ nutanix_host }}"
-      nutanix_port:     "{{ nutanix_port }}"
+      nutanix_host: "{{ nutanix_host }}"
+      nutanix_port: "{{ nutanix_port }}"
       nutanix_username: "{{ nutanix_username }}"
       nutanix_password: "{{ nutanix_password }}"
-      validate_certs:   "{{ nutanix_validate_certs }}"
+      validate_certs: "{{ nutanix_validate_certs }}"
 
   tasks:
-
     # ── Resolve Image ext_id ────────────────────────────────────────────────
     # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
@@ -106,18 +105,18 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: true
+      no_log: false
 
     # ── Create Nutanix VMs ──────────────────────────────────────────────────
     - name: "Nutanix | Create VM '{{ item.name }}'"
       nutanix.ncp.ntnx_vms:
         <<: *ntnx_auth
-        state:       present
-        name:        "{{ item.name }}"
-        desc:        "ESET ICAP server - SLTN/Doetinchem"
-        vcpus:          "{{ vm_num_sockets }}"
+        state: present
+        name: "{{ item.name }}"
+        desc: "ESET ICAP server - SLTN/Doetinchem"
+        vcpus: "{{ vm_num_sockets }}"
         cores_per_vcpu: "{{ vm_cores_per_socket }}"
-        memory_gb:      "{{ vm_memory_gb }}"
+        memory_gb: "{{ vm_memory_gb }}"
         cluster:
           uuid: "{{ vm_cluster_uuid | default(omit) }}"
         disks:
@@ -177,7 +176,7 @@
         vm_poll.response | length > 0 and
         vm_poll.response[0].power_state == 'ON'
       retries: 30
-      delay:   20
+      delay: 20
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
