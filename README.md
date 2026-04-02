@@ -462,14 +462,19 @@ The Ubuntu cloud image is built with `growpart` natively active!
 3. **Reboot the VM**. Cloud-init will automatically detect the new space, grow the partition, and expand the filesystem during boot. No manual CLI work required!
 
 ### Expanding the `/opt/eset` Disk (300GB)
-Because the Ansible playbook formats this secondary disk as a raw `ext4` filesystem directly onto `/dev/sdb` (without creating rigid partition boundaries), expanding it is incredibly easy.
+Because the Ansible playbook formats this secondary disk as a raw `ext4` filesystem directly onto `/dev/sdb` (without creating rigid partition boundaries), expanding it is incredibly easy and can be done **entirely online**.
+
 1. Go into Prism Central.
 2. Edit the VM and increase the ESET **Disk 2** (SCSI 1) size (e.g., to 500GB).
-3. SSH into the VM and run exactly **one command**:
+3. If Linux doesn't pick up the new size automatically, trigger a rescan:
+   ```bash
+   echo 1 | sudo tee /sys/class/block/sdb/device/rescan
+   ```
+4. Expand the filesystem:
    ```bash
    sudo resize2fs /dev/sdb
    ```
-It instantly grabs 100% of the newly added Nutanix space natively.
+It instantly grabs 100% of the newly added Nutanix space natively without any downtime.
 
 ---
 
