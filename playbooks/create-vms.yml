@@ -21,7 +21,7 @@
       validate_certs: "{{ nutanix_validate_certs }}"
 
   tasks:
-    # ── Resolve Image ext_id ────────────────────────────────────────────────
+    # -- Resolve Image ext_id ------------------------------------------------
     # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
       nutanix.ncp.ntnx_images_info:
@@ -43,7 +43,7 @@
       ansible.builtin.set_fact:
         image_ext_id: "{{ vm_image_uuid | default(image_info.response[0].ext_id) }}"
 
-    # ── Resolve Subnet ext_id (eth0 — internal) ─────────────────────────────
+    # -- Resolve Subnet ext_id (eth0 - internal) -----------------------------
     # If the user defines 'vm_subnet_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up subnet ext_id for '{{ vm_subnet_name }}'"
       nutanix.ncp.ntnx_subnets_info:
@@ -65,7 +65,7 @@
       ansible.builtin.set_fact:
         subnet_ext_id: "{{ vm_subnet_uuid | default(subnet_info.response[0].ext_id) }}"
 
-    # ── Resolve Subnet2 ext_id (eth1 — external / internet-facing) ──────────
+    # -- Resolve Subnet2 ext_id (eth1 - external / internet-facing) ----------
     - name: "Nutanix | Look up subnet2 ext_id for '{{ vm_subnet2_name | default('undefined') }}'"
       nutanix.ncp.ntnx_subnets_info:
         <<: *ntnx_auth
@@ -86,14 +86,14 @@
         - (vm_subnet2_uuid is not defined or vm_subnet2_uuid == "")
         - vm_subnet2_name is defined
 
-    # ── Set fact | subnet2_ext_id (eth1) ────────────────────────────────────
+    # -- Set fact | subnet2_ext_id (eth1) ------------------------------------
     - name: "Set fact | subnet2_ext_id (eth1)"
       ansible.builtin.set_fact:
         subnet2_ext_id: "{{ vm_subnet2_uuid if (vm_subnet2_uuid is defined and vm_subnet2_uuid != '') else subnet2_info.response[0].ext_id | default('') }}"
       when:
         - (vm_subnet2_uuid is defined and vm_subnet2_uuid != "") or (vm_subnet2_name is defined)
 
-    # ── Render & Encode cloud-init ──────────────────────────────────────────
+    # -- Render & Encode cloud-init ------------------------------------------
     - name: "Render cloud-init for each VM"
       ansible.builtin.set_fact:
         vm_cloud_init_text: >-
@@ -107,7 +107,7 @@
         label: "{{ item.name }}"
       no_log: false
 
-    # ── Create Nutanix VMs ──────────────────────────────────────────────────
+    # -- Create Nutanix VMs --------------------------------------------------
     - name: "Nutanix | Create VM '{{ item.name }}'"
       nutanix.ncp.ntnx_vms:
         <<: *ntnx_auth
@@ -156,7 +156,7 @@
       register: vm_create_results
       no_log: false
 
-    # ── Insert NGT ISO ─────────────────────────────────────────────────────
+    # -- Insert NGT ISO -----------------------------------------------------
     - name: "Nutanix | Insert NGT ISO to VM '{{ item.name }}'"
       nutanix.ncp.ntnx_vms_ngt_insert_iso_v2:
         <<: *ntnx_auth
@@ -166,7 +166,7 @@
         label: "{{ item.name }}"
         extended: true
 
-    # ── Wait for Power ON ───────────────────────────────────────────────────
+    # -- Wait for Power ON ---------------------------------------------------
     - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"
       nutanix.ncp.ntnx_vms_info:
         <<: *ntnx_auth
@@ -182,7 +182,7 @@
         label: "{{ item.name }}"
       no_log: false
 
-    # ── Export Artifacts for AWX ────────────────────────────────────────────
+    # -- Export Artifacts for AWX --------------------------------------------
     - name: "set_stats | Export icap_vm_ips for downstream jobs"
       ansible.builtin.set_stats:
         data:
