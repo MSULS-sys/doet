@@ -1,16 +1,16 @@
 ---
 # =============================================================================
-# Job 2 — general-server-config.yml
+# Job 2 - general-server-config.yml
 # Post-boot OS baseline configuration and baseline configuration.
 # Runs over SSH as sltnadmin against the 4 newly created VMs.
 # =============================================================================
-- name: "General server configuration — Doetinchem ESET ICAP"
+- name: "General server configuration - Doetinchem ESET ICAP"
   hosts: doet_icap
   gather_facts: true
   become: true
 
   tasks:
-    # ── Wait for SSH / cloud-init to finish ──────────────────────────────────
+    # -- Wait for SSH / cloud-init to finish ----------------------------------
     - name: "Wait | SSH connection is available (timeout 300s)"
       ansible.builtin.wait_for_connection:
         timeout: 300
@@ -23,12 +23,12 @@
       changed_when: false
       failed_when: "'error' in ci_status.stdout or ci_status.rc != 0"
 
-    # ── Timezone ─────────────────────────────────────────────────────────────
+    # -- Timezone -------------------------------------------------------------
     - name: "Timezone | Ensure timezone is {{ vm_timezone }}"
       community.general.timezone:
         name: "{{ vm_timezone }}"
 
-    # ── NTP Sync ─────────────────────────────────────────────────────────────
+    # -- NTP Sync -------------------------------------------------------------
     - name: "NTP | Wait until NTPSynchronized == yes (max 60s)"
       ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
       register: ntp_sync
@@ -37,14 +37,14 @@
       delay: 5
       changed_when: false
 
-    # ── Verify Mounts ────────────────────────────────────────────────────────
+    # -- Verify Mounts --------------------------------------------------------
     - name: "Mount | Verify /opt/eset is a valid mountpoint"
       ansible.builtin.command: mountpoint -q /opt/eset
       register: eset_mount
       changed_when: false
       failed_when: eset_mount.rc != 0
 
-    # ── APT Tweaks ──────────────────────────────────────────────────────────
+    # -- APT Tweaks ----------------------------------------------------------
     - name: "APT | Apply force-unsafe-io for faster dpkg"
       ansible.builtin.copy:
         dest: /etc/dpkg/dpkg.cfg.d/force-unsafe-io
@@ -59,7 +59,7 @@
           APT::Acquire::Retries 3;
         mode: "0644"
 
-    # ── APT Update & Upgrade ─────────────────────────────────────────────────
+    # -- APT Update & Upgrade -------------------------------------------------
     - name: "APT | Update package cache"
       ansible.builtin.apt:
         update_cache: true
@@ -71,7 +71,7 @@
         autoremove: true
         purge: true
 
-    # ── Nutanix Guest Tools (NGT) ───────────────────────────────────────────
+    # -- Nutanix Guest Tools (NGT) -------------------------------------------
     - name: "NGT | Check if NGT is already installed"
       ansible.builtin.stat:
         path: /usr/local/sbin/ngt_cli
@@ -114,7 +114,7 @@
             path: /mnt/nutanix_tools
             state: absent
 
-    # ── Base Packages ────────────────────────────────────────────────────────
+    # -- Base Packages --------------------------------------------------------
     - name: "APT | Install base packages"
       ansible.builtin.apt:
         name:
@@ -136,7 +136,7 @@
         \x1b[97m      "888 888          888     888  Y88888
         \x1b[97mY88b  d88P 888          888     888   Y8888
         \x1b[97m "Y8888P"  88888888     888     888    Y888
-        \x1b[38;5;208m━━━━━━━━━━━━━━━━━━━\x1b[39m     \x1b[38;5;33m━━━━━━━━━━━━━━━━━━━\x1b[39m\x1b[39m
+        \x1b[38;5;208m-------------------\x1b[39m     \x1b[38;5;33m-------------------\x1b[39m\x1b[39m
         EOF
       args:
         executable: /bin/bash
@@ -191,7 +191,7 @@
             ]
           }
 
-    # ── Enable fastfetch system-wide ─────────────────────────────────────────
+    # -- Enable fastfetch system-wide -----------------------------------------
     - name: "Shell | Create profile.d trigger (/etc/profile.d/fastfetch.sh)"
       ansible.builtin.copy:
         dest: /etc/profile.d/fastfetch.sh
@@ -202,7 +202,7 @@
           fi
         mode: "0644"
 
-    # ── UFW Firewall ─────────────────────────────────────────────────────────
+    # -- UFW Firewall ---------------------------------------------------------
     - name: "UFW | Set default incoming policy to deny"
       community.general.ufw:
         default: deny

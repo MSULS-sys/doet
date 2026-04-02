@@ -28,8 +28,8 @@ vm_cluster_uuid: "000648fa-6f4b-66b0-60a2-4cd98f907be6"
 vm_num_sockets:       2
 vm_cores_per_socket:  3
 vm_memory_gb:         24
-vm_os_disk_gb:        50    # SCSI index 0 — cloned from image
-vm_data_disk_gb:      300   # SCSI index 1 — blank, mounted on /opt/eset
+vm_os_disk_gb:        50    # SCSI index 0 - cloned from image
+vm_data_disk_gb:      300   # SCSI index 1 - blank, mounted on /opt/eset
 
 vm_memory_bytes:   "{{ (vm_memory_gb   | int) * 1073741824 }}"
 vm_os_disk_bytes:  "{{ (vm_os_disk_gb  | int) * 1073741824 }}"

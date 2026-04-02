@@ -68,9 +68,9 @@ mounts:
 # -- Files --------------------------------------------------------------------
 write_files:
   # Manual Netplan configuration - Bypasses cloud-init schema validation
-  # eth0 — internal NIC (Nutanix ↔ ESET only, NFSC VLAN 779)
+  # eth0 - internal NIC (Nutanix <-> ESET only, NFSC VLAN 779)
   #         No default route. No internet access.
-  # eth1 — external NIC (EPG-DOET-vSphere-DCU, VLAN 0)
+  # eth1 - external NIC (EPG-DOET-vSphere-DCU, VLAN 0)
   #         Default route + DNS. Internet access. Ansible SSH target.
   - path:    /etc/netplan/00-cloud-init.yaml
     permissions: "0600"
@@ -85,7 +85,7 @@ write_files:
             dhcp4: false
             addresses:
               - "{{ item.ip_address }}/{{ vm_eth0_prefix }}"
-            # Internal only — no default route, no nameservers on this NIC.
+            # Internal only - no default route, no nameservers on this NIC.
 
 {% if item.eth1_ip is defined %}
           eth1:
@@ -128,16 +128,16 @@ runcmd:
   - |
     DATE_STR=$(date '+%A, %dth %B %Y at %H:%M:%S %Z')
     MMDD=$(date +%m%d)
-    if   [ "$MMDD" -ge "0321" ] && [ "$MMDD" -le "0419" ]; then SIGN="Aries (The Ram) \u2648";
-    elif [ "$MMDD" -ge "0420" ] && [ "$MMDD" -le "0520" ]; then SIGN="Taurus (The Bull) \u2649";
-    elif [ "$MMDD" -ge "0521" ] && [ "$MMDD" -le "0620" ]; then SIGN="Gemini (The Twins) \u264a";
-    elif [ "$MMDD" -ge "0621" ] && [ "$MMDD" -le "0722" ]; then SIGN="Cancer (The Crab) \u264b";
-    elif [ "$MMDD" -ge "0723" ] && [ "$MMDD" -le "0822" ]; then SIGN="Leo (The Lion) \u264c";
-    elif [ "$MMDD" -ge "0823" ] && [ "$MMDD" -le "0922" ]; then SIGN="Virgo (The Virgin) \u264d";
-    elif [ "$MMDD" -ge "0923" ] && [ "$MMDD" -le "1022" ]; then SIGN="Libra (The Scales) \u264e";
-    elif [ "$MMDD" -ge "1023" ] && [ "$MMDD" -le "1121" ]; then SIGN="Scorpio (The Scorpion) \u264f";
-    elif [ "$MMDD" -ge "1122" ] && [ "$MMDD" -le "1221" ]; then SIGN="Sagittarius (The Archer) \u2650";
-    elif [ "$MMDD" -ge "1222" ] || [ "$MMDD" -le "0119" ]; then SIGN="Capricorn (The Sea-Goat) \u2651";
-    elif [ "$MMDD" -ge "0120" ] && [ "$MMDD" -le "0218" ]; then SIGN="Aquarius (The Water Bearer) \u2652";
-    else SIGN="Pisces (The Fish) \u2653"; fi
+    if   [ "$MMDD" -ge "0321" ] && [ "$MMDD" -le "0419" ]; then SIGN="Aries (The Ram)";
+    elif [ "$MMDD" -ge "0420" ] && [ "$MMDD" -le "0520" ]; then SIGN="Taurus (The Bull)";
+    elif [ "$MMDD" -ge "0521" ] && [ "$MMDD" -le "0620" ]; then SIGN="Gemini (The Twins)";
+    elif [ "$MMDD" -ge "0621" ] && [ "$MMDD" -le "0722" ]; then SIGN="Cancer (The Crab)";
+    elif [ "$MMDD" -ge "0723" ] && [ "$MMDD" -le "0822" ]; then SIGN="Leo (The Lion)";
+    elif [ "$MMDD" -ge "0823" ] && [ "$MMDD" -le "0922" ]; then SIGN="Virgo (The Virgin)";
+    elif [ "$MMDD" -ge "0923" ] && [ "$MMDD" -le "1022" ]; then SIGN="Libra (The Scales)";
+    elif [ "$MMDD" -ge "1023" ] && [ "$MMDD" -le "1121" ]; then SIGN="Scorpio (The Scorpion)";
+    elif [ "$MMDD" -ge "1122" ] && [ "$MMDD" -le "1221" ]; then SIGN="Sagittarius (The Archer)";
+    elif [ "$MMDD" -ge "1222" ] || [ "$MMDD" -le "0119" ]; then SIGN="Capricorn (The Sea-Goat)";
+    elif [ "$MMDD" -ge "0120" ] && [ "$MMDD" -le "0218" ]; then SIGN="Aquarius (The Water Bearer)";
+    else SIGN="Pisces (The Fish)"; fi
     echo "$DATE_STR in {{ vm_timezone }}. Born under the sign of $SIGN." > /etc/birth-certificate

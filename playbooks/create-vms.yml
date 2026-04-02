@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# Job 1 — create-vms.yml
+# Job 1 - create-vms.yml
 # Provision 4 Ubuntu 24.04 VMs on Nutanix via Prism Central (API).
 # Runs on localhost: nutanix.ncp modules act as API clients, no SSH to Nutanix.
 # =============================================================================
@@ -8,7 +8,7 @@
   hosts: localhost
   gather_facts: false
 
-  # YAML anchor — shared Nutanix auth block reused by every ncp module call.
+  # YAML anchor - shared Nutanix auth block reused by every ncp module call.
   # nutanix_username + nutanix_password are injected by the AWX "Nutanix" Custom Credential.
   # sltnadmin_password_hash is injected by the AWX "SLTN Admin" Custom Credential.
   # All three arrive as extra_vars; no lookup plugin or collection needed.

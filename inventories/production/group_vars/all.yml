@@ -42,15 +42,15 @@ vm_cluster_uuid: "00062f9b-7a59-04cd-4837-1423f3232900"
 vm_num_sockets:       2
 vm_cores_per_socket:  6     # 2 sockets * 6 cores = 12 CPU
 vm_memory_gb:         24
-vm_os_disk_gb:        50    # SCSI index 0 — cloned from image
-vm_data_disk_gb:      300   # SCSI index 1 — blank, mounted on /opt/eset
+vm_os_disk_gb:        50    # SCSI index 0 - cloned from image
+vm_data_disk_gb:      300   # SCSI index 1 - blank, mounted on /opt/eset
 
 vm_memory_bytes:   "{{ (vm_memory_gb   | int) * 1073741824 }}"
 vm_os_disk_bytes:  "{{ (vm_os_disk_gb  | int) * 1073741824 }}"
 vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
 
 # -- Network - eth0 (internal) ---------------------------------------------
-# No default route — internal-only traffic between Nutanix and ESET.
+# No default route - internal-only traffic between Nutanix and ESET.
 vm_eth0_prefix:  24
 vm_eth0_match:   "ens3"
 
