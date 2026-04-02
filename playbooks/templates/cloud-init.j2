@@ -80,16 +80,17 @@ write_files:
         ethernets:
           eth0:
             match:
-              name: "ens3"
+              name: "{{ vm_eth0_match | default('en*') }}"
             set-name: eth0
             dhcp4: false
             addresses:
               - "{{ item.ip_address }}/{{ vm_eth0_prefix }}"
             # Internal only — no default route, no nameservers on this NIC.
 
+{% if item.eth1_ip is defined %}
           eth1:
             match:
-              name: "ens4"
+              name: "{{ vm_eth1_match | default('en*') }}"
             set-name: eth1
             dhcp4: false
             addresses:
@@ -99,6 +100,7 @@ write_files:
             routes:
               - to: default
                 via: "{{ vm_eth1_gateway }}"
+{% endif %}
 
   - path:    /etc/motd.d/00-sltn
     permissions: "0644"

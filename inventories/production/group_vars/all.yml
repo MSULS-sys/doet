@@ -52,10 +52,12 @@ vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
 # ── Network — eth0 (internal) ─────────────────────────────────────────────
 # No default route — internal-only traffic between Nutanix and ESET.
 vm_eth0_prefix:  24
+vm_eth0_match:   "ens3"
 
 # ── Network — eth1 (external / internet-facing) ───────────────────────────
 vm_eth1_prefix:  24
 vm_eth1_gateway: "10.130.100.1"
+vm_eth1_match:   "ens4"
 vm_dns:
   - "172.20.10.1"
   - "172.16.10.1"

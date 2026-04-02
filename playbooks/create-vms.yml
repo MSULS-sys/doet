@@ -67,25 +67,32 @@
         subnet_ext_id: "{{ vm_subnet_uuid | default(subnet_info.response[0].ext_id) }}"
 
     # ── Resolve Subnet2 ext_id (eth1 — external / internet-facing) ──────────
-    - name: "Nutanix | Look up subnet2 ext_id for '{{ vm_subnet2_name }}'"
+    - name: "Nutanix | Look up subnet2 ext_id for '{{ vm_subnet2_name | default('undefined') }}'"
       nutanix.ncp.ntnx_subnets_info:
         <<: *ntnx_auth
-        filter: "name eq '{{ vm_subnet2_name }}'"
+        filter: "name eq '{{ vm_subnet2_name | default('') }}'"
       register: subnet2_info
       no_log: false
-      when: vm_subnet2_uuid is not defined or vm_subnet2_uuid == ""
+      when:
+        - (vm_subnet2_uuid is not defined or vm_subnet2_uuid == "")
+        - vm_subnet2_name is defined
 
-    - name: "Assert | Subnet2 '{{ vm_subnet2_name }}' was found exactly once"
+    - name: "Assert | Subnet2 '{{ vm_subnet2_name | default('undefined') }}' was found exactly once"
       ansible.builtin.assert:
         that: subnet2_info.response | length == 1
         fail_msg: >-
-          Subnet '{{ vm_subnet2_name }}' not found. It must exist exactly as named in Prism Central.
+          Subnet '{{ vm_subnet2_name | default('undefined') }}' not found. It must exist exactly as named in Prism Central.
           Alternatively, define 'vm_subnet2_uuid' to skip this lookup.
-      when: vm_subnet2_uuid is not defined or vm_subnet2_uuid == ""
+      when:
+        - (vm_subnet2_uuid is not defined or vm_subnet2_uuid == "")
+        - vm_subnet2_name is defined
 
+    # ── Set fact | subnet2_ext_id (eth1) ────────────────────────────────────
     - name: "Set fact | subnet2_ext_id (eth1)"
       ansible.builtin.set_fact:
-        subnet2_ext_id: "{{ vm_subnet2_uuid if (vm_subnet2_uuid is defined and vm_subnet2_uuid != '') else subnet2_info.response[0].ext_id }}"
+        subnet2_ext_id: "{{ vm_subnet2_uuid if (vm_subnet2_uuid is defined and vm_subnet2_uuid != '') else subnet2_info.response[0].ext_id | default('') }}"
+      when:
+        - (vm_subnet2_uuid is defined and vm_subnet2_uuid != "") or (vm_subnet2_name is defined)
 
     # ── Render & Encode cloud-init ──────────────────────────────────────────
     - name: "Render cloud-init for each VM"
@@ -99,7 +106,7 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: false
+      no_log: true
 
     # ── Create Nutanix VMs ──────────────────────────────────────────────────
     - name: "Nutanix | Create VM '{{ item.name }}'"
@@ -122,17 +129,24 @@
           - type: "DISK"
             bus: "SCSI"
             size_gb: "{{ vm_data_disk_gb }}"
-        networks:
-          # eth0 — internal NIC (Nutanix ↔ ESET, NFSC VLAN 779, no internet)
-          - is_connected: true
-            subnet:
-              uuid: "{{ subnet_ext_id }}"
-            private_ip: "{{ item.ip_address }}"
-          # eth1 — external NIC (EPG-DOET-vSphere-DCU, internet-facing, Ansible SSH)
-          - is_connected: true
-            subnet:
-              uuid: "{{ subnet2_ext_id }}"
-            private_ip: "{{ item.eth1_ip }}"
+        networks: >-
+          {{
+            [
+              {
+                'is_connected': true,
+                'subnet': {'uuid': subnet_ext_id},
+                'private_ip': item.ip_address
+              }
+            ] + (
+              [
+                {
+                  'is_connected': true,
+                  'subnet': {'uuid': subnet2_ext_id | default('')},
+                  'private_ip': item.eth1_ip | default('')
+                }
+              ] if (subnet2_ext_id is defined and subnet2_ext_id != '' and item.eth1_ip is defined) else []
+            )
+          }}
         guest_customization:
           type: "cloud_init"
           is_overridable: false

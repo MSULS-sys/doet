@@ -35,8 +35,9 @@ vm_memory_bytes:   "{{ (vm_memory_gb   | int) * 1073741824 }}"
 vm_os_disk_bytes:  "{{ (vm_os_disk_gb  | int) * 1073741824 }}"
 vm_data_disk_bytes: "{{ (vm_data_disk_gb | int) * 1073741824 }}"
 
-# ── Network ───────────────────────────────────────────────────────────────
-vm_prefix:       24
+# ── Network — eth0 (internal) ─────────────────────────────────────────────
+vm_eth0_prefix:  24
+vm_eth0_match:   "en*"
 vm_gateway:      "10.128.8.1"
 vm_dns:
   - "10.128.8.3"
