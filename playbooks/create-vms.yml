@@ -13,7 +13,6 @@
   # sltnadmin_password_hash is injected by the AWX "SLTN Admin" Custom Credential.
   # All three arrive as extra_vars; no lookup plugin or collection needed.
   vars:
-    sltnadmin_password_hash: "{{ sltnadmin_password_hash | default('!!UNDEFINED!!') }}"
     _ntnx_auth: &ntnx_auth
       nutanix_host: "{{ nutanix_host }}"
       nutanix_port: "{{ nutanix_port }}"
