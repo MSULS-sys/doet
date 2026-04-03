@@ -12,7 +12,7 @@ manage_etc_hosts: true
 # -- Locale & timezone (native cloud-init keys) -----------------------------
 locale:   "{{ vm_locale }}"
 timezone: "{{ vm_timezone }}"
-byobu_by_default: disable
+byobu_by_default: enable
 
 # -- Network (Network Config v2 - handled in early network stage) -----------
 # NOTE: gateway4 is deprecated in netplan 0.106+ / Ubuntu 24.04.
