@@ -135,7 +135,7 @@
             size_gb: "{{ vm_data_disk_gb }}"
           - type: "CDROM"
             bus: "IDE"
-            empty: true
+            empty_cdrom: true
         networks: >-
           {{
             [

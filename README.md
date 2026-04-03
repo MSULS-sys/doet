@@ -421,11 +421,12 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | Topic          | Decision |
 |----------------|----------|
 | Static IP      | Custom Netplan via `write_files` + `netplan apply` in `runcmd` (bypasses schema validation) |
-| Dual NIC       | `eth0` = internal only (no route, no DNS) matched on `ens3`; `eth1` = external with default route + DNS matched on `ens4` — both set-name renamed in a single Netplan file |
-| Gateway        | `routes: [{to: default, via: ...}]` on **eth1 only** — `gateway4` is **forbidden** in Ubuntu 24.04 |
+| Dual NIC       | `eth0` = external with default route + DNS matched on `ens3` (in dual-nic); `eth1` = internal only (no route, no DNS) matched on `ens4` — both set-name renamed in a single Netplan file |
+| Gateway        | `routes: [{to: default, via: ...}]` on **eth0 only** — `gateway4` is **forbidden** in Ubuntu 24.04 |
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
+| NGT Install    | Provision an additional empty `CDROM` in the disk spec. `cloud-init` claims the first drive (`/dev/sr0`); NGT requires the second empty drive (`/dev/sr1`) to successfully mount from Prism Central. |
 
 ---
 
@@ -451,9 +452,9 @@ Now you must tell your Nutanix File Server to send files to your new ESET machin
 4. Navigate to the **Antivirus** or **ICAP** configuration tab.
 5. Check the box to **Enable Antivirus**.
 6. Under **ICAP Servers**, click **+ Add ICAP Server**.
-7. Input the **eth0 (internal) IP addresses** of your deployed VMs and Port `1344`:
-   - Nutanix communicates with ESET exclusively over the internal NIC (`eth0`).
-   - Use `10.128.40.31` through `10.128.40.34` for Production (not the eth1 IPs).
+7. Input the **internal IP addresses** of your deployed VMs and Port `1344`:
+   - Nutanix communicates with ESET exclusively over the internal NIC (`eth1` in Production, `eth0` in Test).
+   - Use `10.128.40.31` through `10.128.40.34` for Production (not the eth0 IPs).
 8. Check the box to allow Nutanix to block/quarantine infected files based on ESET's response.
 9. Click **Save / Update**. Nutanix will verify the connection to the ESET VMs.
 

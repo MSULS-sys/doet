@@ -201,6 +201,18 @@
           fi
         mode: "0644"
 
+    - name: "Shell | Append trigger to /etc/bash.bashrc for interactive shells (Byobu)"
+      ansible.builtin.blockinfile:
+        path: /etc/bash.bashrc
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: FASTFETCH"
+        block: |
+          # Run fastfetch in interactive non-login shells (like tmux/byobu windows)
+          # We check if $SHLVL is greater than 1 to avoid running it twice on initial login if Bash sourced both
+          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ "$SHLVL" -gt 1 ]; then
+              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+          fi
+
+
     # -- UFW Firewall ---------------------------------------------------------
     - name: "UFW | Set default incoming policy to deny"
       community.general.ufw:
