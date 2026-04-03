@@ -72,17 +72,16 @@
         purge: true
 
     # -- Nutanix Guest Tools (NGT) -------------------------------------------
-    # Detection uses 'systemctl cat ngt_guest_agent' (rc=0 if service unit
-    # exists, non-zero if not) rather than a stat on a binary path, which
-    # proved unreliable across re-runs when the binary was elsewhere.
-    - name: "NGT | Check if NGT service unit is already present"
-      ansible.builtin.command: systemctl cat ngt_guest_agent
+    # The nutanix-guest-agent package installs its unit file to a fixed path
+    # (/etc/systemd/system/ngt_guest_agent.service), so a direct stat is the
+    # most focused and reliable way to detect whether NGT is already installed.
+    - name: "NGT | Check if NGT is already installed"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/ngt_guest_agent.service
       register: ngt_installed
-      changed_when: false
-      failed_when: false
 
     - name: "NGT | Install NGT from CD-ROM"
-      when: ngt_installed.rc != 0
+      when: not ngt_installed.stat.exists
       block:
         - name: "NGT | Find the NUTANIX_TOOLS device"
           ansible.builtin.command: blkid -L NUTANIX_TOOLS
