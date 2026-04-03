@@ -170,10 +170,10 @@
         filter: "name eq '{{ item.name }}'"
       register: vm_poll
       until: >-
-        vm_poll.response | length > 0 and
-        vm_poll.response[0].power_state == 'ON'
+             (vm_poll.response is defined and vm_poll.response | length > 0 and vm_poll.response[0].power_state == 'ON') or
+             (vm_poll.entities is defined and vm_poll.entities | length > 0 and (vm_poll.entities[0].status.resources.power_state | default('')) == 'ON')
       retries: 30
-      delay: 20
+      delay: 5
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
