@@ -356,10 +356,13 @@ A **Workflow Job Template** connects your standalone Job Templates together so t
 5. Click **Start**, then select the `doet-create-vms` Job Template from the list, and click **Save**.
 6. Hover over the `doet-create-vms` node you just placed, and click the **(+)** icon to add the next step.
    - Set the **Run Type** condition to **On Success**.
+   - Under "Node Type", select **Approval**.
+   - Name it `"Setup NGT in Prism Central"` and click **Save**.
+7. Hover over the `"Setup NGT"` approval node, click **(+)**, and set the **Run Type** condition to **On Success**.
    - Select the `doet-general-server-config` Job Template and click **Save**.
-7. Hover over the `doet-general-server-config` node, click **(+)**, and set the **Run Type** condition to **On Success**.
+8. Hover over the `doet-general-server-config` node, click **(+)**, and set the **Run Type** condition to **On Success**.
    - Select the `doet-install-eset` Job Template and click **Save**.
-8. Once your visualizer looks like a chain of 3 linked boxes, click **Save** at the top right to close the visualizer.
+9. Once your visualizer looks like a chain of linked boxes with an Approval node in the middle, click **Save** at the top right to close the visualizer.
 
 When you click **Launch** on your Workflow Template, AWX will ask you three things:
 1. **Which Inventory?** — Choose either the `doet-production` or `doet-test` inventory. Everything else (subnets, IPs, hostnames) is instantly loaded from the `group_vars` linked to that choice! 
@@ -369,8 +372,9 @@ When you click **Launch** on your Workflow Template, AWX will ask you three thin
 After you hit Next:
 1. Fire Job 1 to create the servers.
 2. Natively export checking statuses and the IP endpoints (`set_stats`).
-3. Fire Job 2 completely autonomously using SSH.
-4. Fire Job 3 completely autonomously to deploy the final Software.
+3. **Pipeline PAUSES** — The workflow halts at the Approval Node. Follow the **Mid-Deployment NGT Setup** instructions below to mount the ISO. Once complete, click **Approve** in the AWX UI.
+4. Fire Job 2 completely autonomously using SSH.
+5. Fire Job 3 completely autonomously to deploy the final Software.
 
 ---
 
@@ -425,7 +429,22 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
-| NGT Install    | Provision an additional empty `CDROM` in the disk spec. Because we append this drive before the cloud-init payload, the empty drive manifests as `/dev/sr0`, while `cloud-init` claims the second drive (`/dev/sr1`). Note: Prism Central pc.7.3.1.x lacks v4 APIs for automation. **You must add an Approval Node to the AWX workflow** between the Provisioning and Configuration jobs to pause the pipeline and click "Install NGT" manually in Prism Central. |
+| NGT Install    | Provision an additional empty `CDROM` in the disk spec. Because we append this drive before the cloud-init payload, the empty drive manifests as `/dev/sr0`, while `cloud-init` claims the second drive (`/dev/sr1`). Note: Prism Central pc.7.3.1.x lacks v4 APIs for automation. **You must add an Approval Node to the AWX workflow** between the Provisioning and Configuration jobs to pause the pipeline so you can manually "Setup NGT" in Prism Central. |
+
+---
+
+## Mid-Deployment: Setup NGT in Prism Central
+
+Because API automation for NGT is unsupported on this version of Prism Central, the AWX pipeline will pause at an Approval Node as soon as the VMs are booted. During this pause, you must manually mount the NGT installer to each VM:
+
+1. Log into **Prism Central**.
+2. Navigate to **Compute & Storage → VMs**.
+3. Select your newly created VMs (e.g., `doet-gropicap01-test`, etc.).
+4. Click **Actions** and select **Setup NGT** (or "Manage Guest Tools").
+5. Check the boxes for **Enable Nutanix Guest Tools** and **Mount Nutanix Guest Tools**.
+6. Do **NOT** check "Restart as soon as the install is completed" (Ansible will handle the system state).
+7. Click **Save** / **Submit**.
+8. Once you have done this for all deployed VMs, return to the AWX Workflow and click **Approve** to resume the pipeline!
 
 ---
 
