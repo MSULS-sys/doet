@@ -266,7 +266,6 @@ runcmd:
     # Append the dashboard logic to /etc/bash.bashrc using a literal heredoc
     cat << 'EOF' >> /etc/bash.bashrc
 
-    # SLTN Project Dashboard - plain SSH once per login; Byobu/tmux once per tmux session
     if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ]; then
         _FF_LOCK=""
         if [[ -n "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
