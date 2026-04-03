@@ -227,10 +227,9 @@ runcmd:
   - export DEBIAN_FRONTEND=noninteractive
 
   # Add Fastfetch PPA
-  - apt-get install -y software-properties-common
   - add-apt-repository -y ppa:zhangsongcui3371/fastfetch
 
-  # Install base packages
+  # Uograde system and install extra packages
   - apt-get update
   - apt-get dist-upgrade --purge --autoremove -y
   - apt-get install -y --purge --autoremove gnupg2 hstr glances multitail fastfetch grc bat eza lsd fd-find ripgrep fzf duf 
