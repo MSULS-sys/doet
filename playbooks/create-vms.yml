@@ -155,9 +155,6 @@
           type: "cloud_init"
           is_overridable: false
           script: "{{ lookup('template', 'templates/cloud-init.j2') }}"
-        ngt:
-          is_enabled: true
-          use_https: true
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
