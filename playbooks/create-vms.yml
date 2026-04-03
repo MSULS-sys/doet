@@ -167,7 +167,7 @@
     - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"
       nutanix.ncp.ntnx_vms_info:
         <<: *ntnx_auth
-        vm_uuid: "{{ vm_create_results.results[ansible_loop.index0].vm_uuid }}"
+        vm_uuid: "{{ vm_create_results.results[loop_idx].response.metadata.uuid }}"
       register: vm_poll
       until: >-
              (vm_poll.response is defined and (vm_poll.response[0].power_state | default('')) == 'ON') or
@@ -177,6 +177,7 @@
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
+        index_var: loop_idx
       no_log: false
 
     # -- Export Artifacts for AWX --------------------------------------------
