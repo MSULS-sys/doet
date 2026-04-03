@@ -155,21 +155,16 @@
           type: "cloud_init"
           is_overridable: false
           script: "{{ lookup('template', 'templates/cloud-init.j2') }}"
+        ngt:
+          is_enabled: true
+          use_https: true
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
       register: vm_create_results
       no_log: false
 
-    # -- Insert NGT ISO -----------------------------------------------------
-    - name: "Nutanix | Insert NGT ISO to VM '{{ item.name }}'"
-      nutanix.ncp.ntnx_vms_ngt_insert_iso_v2:
-        <<: *ntnx_auth
-        ext_id: "{{ vm_create_results.results[ansible_loop.index0].vm_uuid }}"
-      loop: "{{ vms }}"
-      loop_control:
-        label: "{{ item.name }}"
-        extended: true
+
 
     # -- Wait for Power ON ---------------------------------------------------
     - name: "Nutanix | Wait for VM '{{ item.name }}' to reach power_state ON"

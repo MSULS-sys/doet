@@ -119,12 +119,20 @@ DNS `172.20.10.1 / 172.16.10.1` · NTP `172.20.10.1 / 172.16.10.1` (fallback `nt
 
 ## Prerequisites
 
-### AWX Collections (install on execution environment or AWX EE)
+### AWX Prerequisites (install on execution environment or AWX EE)
 
+**Ansible Collections:**
 ```bash
 ansible-galaxy collection install \
   nutanix.ncp:2.4.0 \
   community.general
+```
+
+**Python Libraries:**
+```bash
+pip install \
+  ntnx-v3-api-client \
+  ntnx-vmm-py-client
 ```
 
 ### 1. The SSH Key-Pair
