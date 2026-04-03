@@ -104,27 +104,6 @@ write_files:
             # Internal-only network - no default route or DNS
 {% endif %}
 
-  - path:    /etc/profile.d/99-bash-history.sh
-    permissions: "0644"
-    content: |
-      # Long bash history with ISO-8601 timestamps (cloud-init)
-      export HISTSIZE=100000
-      export HISTFILESIZE=100000
-      export HISTTIMEFORMAT='%F %T '
-      export PROMPT_COMMAND='history -a'
-      export LESS='-R -i -F -X'
-      export GREP_COLORS='mt=01;31'
-      export HISTIGNORE='ls:exit:history:pwd'
-      export HISTCONTROL=ignoreboth
-      shopt -s histappend 2>/dev/null || true
-      shopt -s checkwinsize 2>/dev/null || true
-      shopt -s cmdhist 2>/dev/null || true
-      shopt -s dirspell 2>/dev/null || true
-      shopt -s globasciiranges 2>/dev/null || true
-      shopt -s cdspell 2>/dev/null || true
-      shopt -s autocd 2>/dev/null || true
-      shopt -s cdable_vars 2>/dev/null || true
-
   # -- APT Tweaks ------------------------------------------------------------
   - path:    /etc/dpkg/dpkg.cfg.d/force-unsafe-io
     permissions: "0644"
@@ -261,7 +240,7 @@ runcmd:
   # Add Fastfetch PPA
   - add-apt-repository -y ppa:zhangsongcui3371/fastfetch
 
-  # Uograde system and install extra packages
+  # Upgrade system and install extra packages
   - apt-get update
   - apt-get dist-upgrade --purge --autoremove -y
   - apt-get install -y --purge --autoremove neovim gnupg2 hstr glances multitail fastfetch grc bat eza lsd fd-find ripgrep fzf duf 
