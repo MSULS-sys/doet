@@ -104,6 +104,15 @@ write_files:
             # Internal-only network - no default route or DNS
 {% endif %}
 
+  - path:    /etc/profile.d/99-bash-history.sh
+    permissions: "0644"
+    content: |
+      # Long bash history with ISO-8601 timestamps (cloud-init)
+      export HISTSIZE=100000
+      export HISTFILESIZE=100000
+      export HISTTIMEFORMAT='%F %T '
+      shopt -s histappend 2>/dev/null || true
+
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
 # However, since we used write_files to bypass schema validation, we must
@@ -120,6 +129,13 @@ runcmd:
   - systemctl enable systemd-timesyncd
   - systemctl restart systemd-timesyncd
   - timedatectl set-ntp true
+
+  # Bash: ensure interactive non-login shells (e.g. tmux) load profile.d history settings
+  - |
+    if ! grep -qF 'profile.d/99-bash-history.sh' /etc/bash.bashrc; then
+      printf '\n# cloud-init: long bash history + timestamps\n' >> /etc/bash.bashrc
+      printf '[[ $- == *i* ]] && [ -f /etc/profile.d/99-bash-history.sh ] && . /etc/profile.d/99-bash-history.sh\n' >> /etc/bash.bashrc
+    fi
 
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
   # (symlinks must use chmod -h so we do not change the target file's mode).
