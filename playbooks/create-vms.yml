@@ -133,6 +133,9 @@
           - type: "DISK"
             bus: "SCSI"
             size_gb: "{{ vm_data_disk_gb }}"
+          - type: "CDROM"
+            bus: "IDE"
+            empty: true
         networks: >-
           {{
             [
