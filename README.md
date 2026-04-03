@@ -92,28 +92,28 @@ NTP `10.128.8.3 / 10.128.8.4` (fallback `ntp.ubuntu.com`) · timezone `Europe/Am
 **Prism Central URL:** [doet-gropnpc01.doetinchem-sc.sltncloud.local](https://doet-gropnpc01.doetinchem-sc.sltncloud.local:9440) (adjustable via vars)
 
 > **Dual-NIC layout** — each VM has two network interfaces:
-> - **eth0** (`NFSC VLAN 779`, `10.128.40.x`) — internal only. Traffic between Nutanix and ESET flows here. **No default route. No internet access.**
-> - **eth1** (`DOET:DOET:EPG-DOET-vSphere-DCU VLAN 0`, `10.130.100.x`) — external / internet-facing. Carries the default route (`10.130.100.1`) and all DNS. **Ansible SSH connects on this interface.**
+> - **eth0** (`DOET:DOET:EPG-DOET-vSphere-DCU VLAN 0`, `10.130.100.x`) — external / internet-facing. Carries the default route (`10.130.100.1`) and all DNS. **Ansible SSH connects on this interface.**
+> - **eth1** (`NFSC VLAN 779`, `10.128.40.x`) — internal only. Traffic between Nutanix and ESET flows here. **No default route. No internet access.**
 
-| VM Name              | eth0 IP (internal) | eth1 IP (external / Ansible) | CPU           | RAM   | OS Disk | Data Disk        |
-|----------------------|--------------------|------------------------------|---------------|-------|---------|------------------|
-| doet-gropicap01-prod | 10.128.40.31       | 10.130.100.191               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap02-prod | 10.128.40.32       | 10.130.100.192               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap03-prod | 10.128.40.33       | 10.130.100.193               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
-| doet-gropicap04-prod | 10.128.40.34       | 10.130.100.194               | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| VM Name              | eth0 IP (external / Ansible) | eth1 IP (internal) | CPU           | RAM   | OS Disk | Data Disk        |
+|----------------------|------------------------------|--------------------|---------------|-------|---------|------------------|
+| doet-gropicap01-prod | 10.130.100.191               | 10.128.40.31       | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap02-prod | 10.130.100.192               | 10.128.40.32       | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap03-prod | 10.130.100.193               | 10.128.40.33       | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
+| doet-gropicap04-prod | 10.130.100.194               | 10.128.40.34       | 2s × 6c = 12c | 24 GB | 50 GB   | 300 GB /opt/eset |
 
-**eth0 — Internal Network:**
-Subnet `NFSC (VLAN 779)` (`e16571d2-0199-4bef-8c06-13525de192db`) · no gateway (internal-only) · prefix `/24`
-
-**eth1 — External Network:**
-Subnet `DOET:DOET:EPG-DOET-vSphere-DCU (VLAN 0)` · gateway `10.130.100.1` · prefix `/24`
+**eth0 — External Network:**
+Subnet `DOET:DOET:EPG-DOET-vSphere-DCU (VLAN 0)` (`26d75bac-450c-4f99-99c7-19397cec1807`) · gateway `10.130.100.1` · prefix `/24`
 DNS `172.20.10.1 / 172.16.10.1` · NTP `172.20.10.1 / 172.16.10.1` (fallback `ntp.ubuntu.com`) · timezone `Europe/Amsterdam`
+
+**eth1 — Internal Network:**
+Subnet `NFSC (VLAN 779)` (`e16571d2-0199-4bef-8c06-13525de192db`) · no gateway (internal-only) · prefix `/24`
 
 **Nutanix UUIDs (Production):**
 - **Cluster:** `00062f9b-7a59-04cd-4837-1423f3232900`
 - **Base Image:** `ed2a849c-5a85-49ed-ad51-c7c1f828334b` (noble-server-cloudimg-amd64.img)
-- **Subnet eth0 (NFSC):** `e16571d2-0199-4bef-8c06-13525de192db`
-- **Subnet eth1 (EPG-DOET-vSphere-DCU):** `26d75bac-450c-4f99-99c7-19397cec1807`
+- **Subnet eth0 (EPG-DOET-vSphere-DCU):** `26d75bac-450c-4f99-99c7-19397cec1807`
+- **Subnet eth1 (NFSC):** `e16571d2-0199-4bef-8c06-13525de192db`
 
 ---
 
