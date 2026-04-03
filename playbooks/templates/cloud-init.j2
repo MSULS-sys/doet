@@ -104,6 +104,8 @@ write_files:
             # Internal-only network - no default route or DNS
 {% endif %}
 
+  # Static banner (PAM reads /etc/motd.d/*). Dynamic MOTD is built from executable
+  # scripts in /etc/update-motd.d/ — see runcmd below; do not duplicate this file there.
   - path:    /etc/motd.d/00-sltn
     permissions: "0644"
     content: |
@@ -126,6 +128,25 @@ runcmd:
   - systemctl enable systemd-timesyncd
   - systemctl restart systemd-timesyncd
   - timedatectl set-ntp true
+
+  # MOTD: disable all update-motd.d scripts, then enable only the ones we want
+  # (symlinks must use chmod -h so we do not change the target file’s mode).
+  - |
+    for f in /etc/update-motd.d/*; do
+      [ -e "$f" ] || continue
+      if [ -L "$f" ]; then
+        chmod -h a-x "$f" 2>/dev/null || mv -f "$f" "${f}.disabled"
+      else
+        chmod a-x "$f"
+      fi
+    done
+    for f in 85-fwupd 90-updates-available 97-overlayroot 98-fsck-at-reboot 98-reboot-required; do
+      p="/etc/update-motd.d/$f"
+      if [ -e "$p" ]; then
+        if [ -L "$p" ]; then chmod -h a+x "$p"; else chmod a+x "$p"; fi
+      fi
+    done
+
   # Birth certificate & Zodiac calculation
   - |
     DATE_STR=$(date '+%A, %d %B %Y at %H:%M:%S %Z')
