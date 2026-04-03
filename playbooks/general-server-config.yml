@@ -60,10 +60,21 @@
         mode: "0644"
 
     # -- APT Update & Upgrade -------------------------------------------------
-    - name: "APT | Update package cache"
-      ansible.builtin.apt:
+    - name: "APT | Add Fastfetch PPA (not in noble default repos)"
+      ansible.builtin.apt_repository:
+        repo: ppa:zhangsongcui3371/fastfetch
+        state: present
         update_cache: true
-        cache_valid_time: 0
+
+    - name: "APT | Install base packages"
+      ansible.builtin.apt:
+        name:
+          - gnupg2
+          - glances
+          - multitail
+          - fastfetch
+        state: present
+      register: pkg_install
 
     - name: "APT | Upgrade all packages"
       ansible.builtin.apt:
@@ -117,36 +128,19 @@
             path: /mnt/nutanix_tools
             state: absent
 
-    # -- Base Packages --------------------------------------------------------
-    - name: "APT | Add Fastfetch PPA (not in noble default repos)"
-      ansible.builtin.apt_repository:
-        repo: ppa:zhangsongcui3371/fastfetch
-        state: present
-        update_cache: true
-
-    - name: "APT | Install base packages"
-      ansible.builtin.apt:
-        name:
-          - gnupg2
-          - glances
-          - multitail
-          - fastfetch
-        state: present
-      register: pkg_install
-
     - name: "Fastfetch | Create system-wide logo (/etc/sltn.logo)"
       ansible.builtin.copy:
         dest: /etc/sltn.logo
         content: |
-           .d8888b.   888      88888888888 888b    888 
-           d88P  Y88  888          888     8888b   888
-           Y88b.      888          888     88888b  888
-           "Y888b.    888          888     888Y88b 888 
-              "Y88b.  888          888     888 Y88b888 
-                "888  888          888     888  Y88888 
-           Y88b  d88P 888          888     888   Y8888
-           "Y8888P"   88888888     888     888    Y888 
-           -------------------     -------------------
+          .d8888b.   88    88888888888 888b    888 
+          d88P  Y88  888       888     8888b   888
+          Y88b.      888       888     88888b  888
+          "Y888b.    888       888     888Y88b 888 
+             "Y88b.  888       888     888 Y88b888 
+               "888  888       888     888  Y88888 
+          Y88b  d88  888       888     888   Y8888
+          "YY8888P"  88888888  888     888    Y888 
+          -------------------  -------------------
         mode: "0644"
 
     - name: "Fastfetch | Create system-wide config (/etc/fastfetch.config.jsonc)"
@@ -243,7 +237,6 @@
                   NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
               fi
           fi
-
 
     # -- UFW Firewall ---------------------------------------------------------
     - name: "UFW | Set default incoming policy to deny"
