@@ -21,6 +21,14 @@
       validate_certs: "{{ nutanix_validate_certs }}"
 
   tasks:
+    - name: "[DEBUG] | Check Nutanix Credentials"
+      ansible.builtin.debug:
+        msg: 
+          - "Prism Host: {{ nutanix_host }}"
+          - "Username: {{ nutanix_username | default('!! NOT DEFINED !!') }}"
+          - "Password: {{ nutanix_password | default('!! NOT DEFINED !!') }}"
+      no_log: false  # Force log visibility for troubleshooting
+
     # -- Resolve Image ext_id ------------------------------------------------
     # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
     - name: "Nutanix | Look up image ext_id for '{{ vm_image_name }}'"
@@ -96,23 +104,19 @@
     # -- Render & Encode cloud-init ------------------------------------------
     - name: "Render cloud-init for each VM"
       ansible.builtin.set_fact:
-        vm_cloud_init_text: >-
-          {{
-            vm_cloud_init_text | default({}) | combine({
-              item.name: lookup('template', 'templates/cloud-init.j2')
-            })
-          }}
+        vm_cloud_init_text: "{{ vm_cloud_init_text | default({}) | combine({vm_item.name: lookup('template', 'templates/cloud-init.j2')}) }}"
       loop: "{{ vms }}"
       loop_control:
-        label: "{{ item.name }}"
+        loop_var: vm_item
+        label: "{{ vm_item.name }}"
       no_log: false
 
     # -- Create Nutanix VMs --------------------------------------------------
-    - name: "Nutanix | Create VM '{{ item.name }}'"
+    - name: "Nutanix | Create VM '{{ vm_item.name }}'"
       nutanix.ncp.ntnx_vms:
         <<: *ntnx_auth
         state: present
-        name: "{{ item.name }}"
+        name: "{{ vm_item.name }}"
         desc: "ESET ICAP server - SLTN/Doetinchem"
         vcpus: "{{ vm_num_sockets }}"
         cores_per_vcpu: "{{ vm_cores_per_socket }}"
@@ -134,25 +138,26 @@
               {
                 'is_connected': true,
                 'subnet': {'uuid': subnet_ext_id},
-                'private_ip': item.ip_address
+                'private_ip': vm_item.ip_address
               }
             ] + (
               [
                 {
                   'is_connected': true,
                   'subnet': {'uuid': subnet2_ext_id | default('')},
-                  'private_ip': item.eth1_ip | default('')
+                  'private_ip': vm_item.eth1_ip | default('')
                 }
-              ] if (subnet2_ext_id is defined and subnet2_ext_id != '' and item.eth1_ip is defined) else []
+              ] if (subnet2_ext_id is defined and subnet2_ext_id != '' and vm_item.eth1_ip is defined) else []
             )
           }}
         guest_customization:
           type: "cloud_init"
           is_overridable: false
-          script: "{{ vm_cloud_init_text[item.name] }}"
+          script: "{{ vm_cloud_init_text[vm_item.name] }}"
       loop: "{{ vms }}"
       loop_control:
-        label: "{{ item.name }}"
+        loop_var: vm_item
+        label: "{{ vm_item.name }}"
       register: vm_create_results
       no_log: false
 
