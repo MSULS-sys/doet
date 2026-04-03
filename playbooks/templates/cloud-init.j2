@@ -233,7 +233,7 @@ runcmd:
   # Install base packages
   - apt-get update
   - apt-get dist-upgrade --purge --autoremove -y
-  - apt-get install -y --purge --autoremove gnupg2 glances multitail fastfetch
+  - apt-get install -y --purge --autoremove gnupg2 glances multitail fastfetch grc bat eza lsd dust duf broot fd ripgrep fzf mcfly choose procs zoxide doggo lazygit
 
   # Bash: ensure interactive non-login shells (e.g. tmux) load profile.d history settings
   - |
@@ -241,7 +241,7 @@ runcmd:
       printf '\n# cloud-init: long bash history + timestamps\n' >> /etc/bash.bashrc
       printf '[[ $- == *i* ]] && [ -f /etc/profile.d/99-bash-history.sh ] && . /etc/profile.d/99-bash-history.sh\n' >> /etc/bash.bashrc
     fi
-
+ 
 
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
   # (symlinks must use chmod -h so we do not change the target file's mode).
