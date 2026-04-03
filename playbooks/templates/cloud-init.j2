@@ -267,14 +267,30 @@ runcmd:
       printf '[[ $- == *i* ]] && [ -f /etc/profile.d/99-bash-history.sh ] && . /etc/profile.d/99-bash-history.sh\n' >> /etc/bash.bashrc
     fi
  
-  - wget -O /etc/profile.d/z98-ultimate_bashrc.sh https://sourceforge.net/projects/ultimate-bashrc/files/_bashrc/download
+  - mkdir -p /etc/sltn
+  - wget -O /etc/sltn/ultimate_bashrc.inc https://sourceforge.net/projects/ultimate-bashrc/files/_bashrc/download
   - wget -O /etc/profile.d/z97-bashmarks.sh https://raw.githubusercontent.com/huyng/bashmarks/master/bashmarks.sh
 
-  # CRITICAL: Remove the built-in fastfetch/neofetch from Ultimate Bashrc 
-  # to prevent the double-logo issue.
-  - sed -i '/fastfetch/d; /neofetch/d; /screenfetch/d' /etc/profile.d/z98-ultimate_bashrc.sh
+  # Create Safe Loader for Ultimate Bashrc
+  - |
+    cat << 'EOF' > /etc/profile.d/z98-ultimate-loader.sh
+    # Alias fetch commands to ':' (do nothing) to prevent double-logos
+    alias fastfetch=':'
+    alias neofetch=':'
+    alias screenfetch=':'
+    
+    # Source the large script and silence errors/output
+    if [ -f /etc/sltn/ultimate_bashrc.inc ]; then
+        source /etc/sltn/ultimate_bashrc.inc >/dev/null 2>&1
+    fi
 
-  # Cleanup any old triggers
+    # Cleanup aliases so our branded dashboard can run next
+    unalias fastfetch 2>/dev/null
+    unalias neofetch 2>/dev/null
+    unalias screenfetch 2>/dev/null
+    EOF
+
+  # Final Cleanup
   - rm -f /etc/profile.d/fastfetch.sh
 
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
