@@ -154,10 +154,6 @@
             "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
             "logo": {
               "source": "/etc/sltn.logo",
-              "color": {
-                "1": "33",
-                "2": "34"
-              },
               "padding": {
                 "right": 2
               }
@@ -190,16 +186,18 @@
               "cpu",
               "memory",
               "swap",
-              "disk",
-              "break",
-              "colors"
+              "disk"
             ]
           }
 
     # -- Enable fastfetch system-wide -----------------------------------------
-    # We use a SINGLE trigger point in /etc/bash.bashrc with an env-var guard
-    # to prevent double execution. The profile.d script is removed to avoid
-    # the login-shell + interactive-shell double-fire problem in byobu/tmux.
+    # Trigger point: /etc/bash.bashrc (all interactive shells).
+    # Guard 1: $TMUX / $STY — skip when inside byobu/tmux/screen so fastfetch
+    #          only runs in the pre-multiplexer SSH shell, preventing double
+    #          execution when byobu spawns a new shell (env vars don't cross
+    #          the tmux process boundary).
+    # Guard 2: $_FASTFETCH_DONE — prevents re-runs within the same plain shell.
+    # --no-color: suppresses ANSI codes, safe for git-bash / PuTTY clients.
     - name: "Shell | Remove profile.d trigger (prevents double fastfetch)"
       ansible.builtin.file:
         path: /etc/profile.d/fastfetch.sh
@@ -210,11 +208,10 @@
         path: /etc/bash.bashrc
         marker: "# {mark} ANSIBLE MANAGED BLOCK: FASTFETCH"
         block: |
-          # SLTN Project Dashboard — runs once per interactive shell
-          # Uses env-var guard to prevent double execution in the same session
-          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -z "$_FASTFETCH_DONE" ]; then
+          # SLTN Project Dashboard — runs once at SSH login, skipped inside byobu/tmux/screen
+          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -z "$TMUX" ] && [ -z "$STY" ] && [ -z "$_FASTFETCH_DONE" ]; then
               export _FASTFETCH_DONE=1
-              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc --no-color
           fi
 
 
