@@ -504,7 +504,7 @@ It instantly grabs 100% of the newly added Nutanix space natively without any do
 - `no_log: true` on **every task** that touches fetched secrets.
 - Secrets are **never written to disk** — they are seamlessly passed into Ansible memory space via AWX Custom Credentials.
 - `ansible-vault` is **not needed** — AWX manages the encrypted at-rest states natively.
-- SSH password auth is **disabled** (`ssh_pwauth: false` in cloud-init).
+- SSH password auth is **enabled** (`ssh_pwauth: true` in cloud-init) for fallback CLI access.
 - Root login is **disabled** (`disable_root: true` in cloud-init).
 - UFW default-deny inbound (ports 22 + 1344 allowed) applied **before** ESET installation.
 

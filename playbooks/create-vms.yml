@@ -21,6 +21,16 @@
       validate_certs: "{{ nutanix_validate_certs }}"
 
   pre_tasks:
+    - name: "Install required Nutanix Python SDKs inside execution environment"
+      ansible.builtin.pip:
+        name:
+          - ntnx-v3-api-client
+          - ntnx-vmm-py-client
+        state: present
+        extra_args: "--user -q"
+      delegate_to: localhost
+      changed_when: false
+
     - name: "!!! CHECK NUTANIX & ADMIN CREDENTIALS HERE !!!"
       ansible.builtin.debug:
         msg: 
