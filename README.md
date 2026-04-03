@@ -440,11 +440,12 @@ Because API automation for NGT is unsupported on this version of Prism Central, 
 1. Log into **Prism Central**.
 2. Navigate to **Compute & Storage → VMs**.
 3. Select your newly created VMs (e.g., `doet-gropicap01-test`, etc.).
-4. Click **Actions** and select **Setup NGT** (or "Manage Guest Tools").
-5. Check the boxes for **Enable Nutanix Guest Tools** and **Mount Nutanix Guest Tools**.
-6. Do **NOT** check "Restart as soon as the install is completed" (Ansible will handle the system state).
-7. Click **Save** / **Submit**.
-8. Once you have done this for all deployed VMs, return to the AWX Workflow and click **Approve** to resume the pipeline!
+4. Under the **Guest Tools** menu, click **Set Up NGT**.
+5. **Step 1 (Choose Preference):** Select **New NGT Installation** and click **Next**.
+6. **Step 2 (Configure Applications):** Leave VSS and SSR unchecked (unless specifically required by your backup strategy) and click **Next**.
+7. **Step 3 (Install):** Select **Mount Installer** (do *not* select "Install Automatically").
+8. Click **Complete Set Up**.
+9. Return to the AWX Workflow UI and click **Approve** on the pause node to resume the pipeline!
 
 ---
 

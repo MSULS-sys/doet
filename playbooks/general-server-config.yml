@@ -115,6 +115,12 @@
             state: absent
 
     # -- Base Packages --------------------------------------------------------
+    - name: "APT | Add Fastfetch PPA (not in noble default repos)"
+      ansible.builtin.apt_repository:
+        repo: ppa:zhangsongcui3371/fastfetch
+        state: present
+        update_cache: true
+
     - name: "APT | Install base packages"
       ansible.builtin.apt:
         name:
