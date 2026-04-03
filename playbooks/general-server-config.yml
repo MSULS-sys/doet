@@ -135,15 +135,15 @@
       ansible.builtin.copy:
         dest: /etc/sltn.logo
         content: |
-          \x1b[97m .d8888b.  888      88888888888 888b    888
-          \x1b[97md88P  Y88b 888          888     8888b   888
-          \x1b[97mY88b.      888          888     88888b  888
-          \x1b[97m "Y888b.   888          888     888Y88b 888
-          \x1b[97m    "Y88b. 888          888     888 Y88b888
-          \x1b[97m      "888 888          888     888  Y88888
-          \x1b[97mY88b  d88P 888          888     888   Y8888
-          \x1b[97m "Y8888P"  88888888     888     888    Y888
-          \x1b[38;5;208m-------------------\x1b[39m     \x1b[38;5;33m-------------------\x1b[39m\x1b[39m
+          .d8888b.  888      88888888888 888b    888
+          d88P  Y88b 888          888     8888b   888
+          Y88b.      888          888     88888b  888
+           Y888b.   888          888     888Y88b 888
+              Y88b. 888          888     888 Y88b888
+                888 888          888     888  Y88888
+          Y88b  d88P 888          888     888   Y8888
+           Y8888P   88888888     888     888    Y888
+          -------------------     -------------------
         mode: "0644"
 
     - name: "Fastfetch | Create system-wide config (/etc/fastfetch.config.jsonc)"
@@ -197,24 +197,23 @@
           }
 
     # -- Enable fastfetch system-wide -----------------------------------------
-    - name: "Shell | Create profile.d trigger (/etc/profile.d/fastfetch.sh)"
-      ansible.builtin.copy:
-        dest: /etc/profile.d/fastfetch.sh
-        content: |
-          # SLTN Project Dashboard
-          if [ -x /usr/bin/fastfetch ]; then
-              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
-          fi
-        mode: "0644"
+    # We use a SINGLE trigger point in /etc/bash.bashrc with an env-var guard
+    # to prevent double execution. The profile.d script is removed to avoid
+    # the login-shell + interactive-shell double-fire problem in byobu/tmux.
+    - name: "Shell | Remove profile.d trigger (prevents double fastfetch)"
+      ansible.builtin.file:
+        path: /etc/profile.d/fastfetch.sh
+        state: absent
 
-    - name: "Shell | Append trigger to /etc/bash.bashrc for interactive shells (Byobu)"
+    - name: "Shell | Single fastfetch trigger in /etc/bash.bashrc (all interactive shells)"
       ansible.builtin.blockinfile:
         path: /etc/bash.bashrc
         marker: "# {mark} ANSIBLE MANAGED BLOCK: FASTFETCH"
         block: |
-          # Run fastfetch in interactive non-login shells (like tmux/byobu windows)
-          # We check if $SHLVL is greater than 1 to avoid running it twice on initial login if Bash sourced both
-          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ "$SHLVL" -gt 1 ]; then
+          # SLTN Project Dashboard — runs once per interactive shell
+          # Uses env-var guard to prevent double execution in the same session
+          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -z "$_FASTFETCH_DONE" ]; then
+              export _FASTFETCH_DONE=1
               /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
           fi
 
