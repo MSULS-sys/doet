@@ -111,7 +111,99 @@ write_files:
       export HISTSIZE=100000
       export HISTFILESIZE=100000
       export HISTTIMEFORMAT='%F %T '
+      export PROMPT_COMMAND='history -a'
+      export LESS='-R -i -F -X'
+      export GREP_COLORS='mt=01;31'
+      export HISTIGNORE='ls:exit:history:pwd'
+      export HISTCONTROL=ignoreboth
       shopt -s histappend 2>/dev/null || true
+      shopt -s checkwinsize 2>/dev/null || true
+      shopt -s cmdhist 2>/dev/null || true
+      shopt -s dirspell 2>/dev/null || true
+      shopt -s globasciiranges 2>/dev/null || true
+      shopt -s cdspell 2>/dev/null || true
+      shopt -s autocd 2>/dev/null || true
+      shopt -s cdable_vars 2>/dev/null || true
+
+  # -- APT Tweaks ------------------------------------------------------------
+  - path:    /etc/dpkg/dpkg.cfg.d/force-unsafe-io
+    permissions: "0644"
+    content: |
+      force-unsafe-io
+
+  - path:    /etc/apt/apt.conf.d/99parallel
+    permissions: "0644"
+    content: |
+      APT::Acquire::Queue-Mode "access";
+      APT::Acquire::Retries 3;
+
+
+  # -- Fastfetch Assets -------------------------------------------------------
+  - path:    /etc/sltn.logo
+    permissions: "0644"
+    content: |
+      .d8888b.   888   88888888888 888b    888 
+      d88P  Y88  888       888     8888b   888
+      Y88b.      888       888     88888b  888
+      "Y888b.    888       888     888Y88b 888 
+         "Y88b.  888       888     888 Y88b888 
+           "888  888       888     888  Y88888 
+      Y88b  d88  888       888     888   Y8888
+      "YY8888P"  88888888  888     888    Y888 
+      -------------------  -------------------
+
+  - path:    /etc/fastfetch.config.jsonc
+    permissions: "0644"
+    content: |
+      {
+        "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+        "display": {
+          "pipe": false,
+          "key": {
+            "width": 11,
+            "paddingLeft": 0
+          }
+        },
+        "logo": {
+          "type": "file",
+          "source": "/etc/sltn.logo",
+          "padding": {
+            "top": 0,
+            "left": 0,
+            "right": 4
+          }
+        },
+        "modules": [
+          "title",
+          "separator",
+          {
+            "type": "custom",
+            "key": "PROJECT",
+            "format": "SLTN CLOUD LINUX - DOETINCHEM ESET ICAP"
+          },
+          {
+            "type": "custom",
+            "key": "PIPELINE",
+            "format": "Provisioned via Nutanix + Cloud-Init + AWX"
+          },
+          {
+            "type": "command",
+            "key": "DOB",
+            "text": "cat /etc/birth-certificate 2>/dev/null"
+          },
+          "separator",
+          "os",
+          "host",
+          "kernel",
+          "localip",
+          "uptime",
+          "packages",
+          "cpu",
+          "memory",
+          "swap",
+          "disk"
+        ]
+      }
 
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
@@ -130,12 +222,23 @@ runcmd:
   - systemctl restart systemd-timesyncd
   - timedatectl set-ntp true
 
+# -- APT Update & Upgrade -------------------------------------------------
+  # Add Fastfetch PPA
+  - apt install -y software-properties-common
+  - add-apt-repository -y ppa:zhangsongcui3371/fastfetch
+
+  # Install base packages
+  - apt update
+  - apt dist-upgrade --purge --autoremove -y
+  - [ apt, install, -y, gnupg2, glances, multitail, fastfetch ]
+
   # Bash: ensure interactive non-login shells (e.g. tmux) load profile.d history settings
   - |
     if ! grep -qF 'profile.d/99-bash-history.sh' /etc/bash.bashrc; then
       printf '\n# cloud-init: long bash history + timestamps\n' >> /etc/bash.bashrc
       printf '[[ $- == *i* ]] && [ -f /etc/profile.d/99-bash-history.sh ] && . /etc/profile.d/99-bash-history.sh\n' >> /etc/bash.bashrc
     fi
+
 
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
   # (symlinks must use chmod -h so we do not change the target file's mode).
@@ -154,6 +257,38 @@ runcmd:
         if [ -L "$p" ]; then chmod -h a+x "$p"; else chmod a+x "$p"; fi
       fi
     done
+    
+  # -- Fastfetch: System-wide interactive trigger -----------------------------
+  - |
+    # Remove old profile.d trigger if it exists
+    rm -f /etc/profile.d/fastfetch.sh
+
+    # Append the dashboard logic to /etc/bash.bashrc using a literal heredoc
+    cat << 'EOF' >> /etc/bash.bashrc
+
+    # SLTN Project Dashboard — plain SSH once per login; Byobu/tmux once per tmux session
+    if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ]; then
+        _FF_LOCK=""
+        if [[ -n "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
+            _FF_SID="$(tmux display-message -p '#{session_id}' 2>/dev/null)"
+            if [[ -n "$_FF_SID" ]]; then
+                _FF_LOCK="/tmp/.ff_${UID}_tmuxsess_${_FF_SID}"
+            else
+                _FF_LOCK="/tmp/.ff_${UID}_tmux_${TMUX//[\/,]/_}"
+            fi
+        elif [[ -n "$STY" ]]; then
+            _FF_LOCK="/tmp/.ff_${UID}_screen_${STY//[.\/]/_}"
+        elif [[ -n "$SSH_CONNECTION" || -n "$SSH_CLIENT" ]]; then
+            _FF_KEY="${SSH_CONNECTION:-$SSH_CLIENT}"
+            _FF_KEY="${_FF_KEY// /_}"
+            _FF_LOCK="/tmp/.ff_${UID}_ssh_${_FF_KEY}"
+        fi
+        if [[ -n "$_FF_LOCK" ]] && [ ! -f "$_FF_LOCK" ]; then
+            touch "$_FF_LOCK" 2>/dev/null
+            NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+        fi
+    fi
+    EOF
 
   # Birth certificate & Zodiac calculation
   - |
