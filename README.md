@@ -17,10 +17,10 @@ AWX Workflow Template
 │         └─ 4× Ubuntu 24.04 VMs with cloud-init
 │
 ├── Job 2 ── general-server-config.yml   (hosts: doet_icap, SSH)
-│    └─ OS baseline: timezone, NTP verify, Nutanix Guest Tools (NGT), UFW, apt upgrade
+│    └─ OS baseline: timezone, NTP verify, Nutanix Guest Tools (NGT), fastfetch, UFW, apt upgrade
 │
 └── Job 3 ── install-eset.yml            (hosts: doet_icap, SSH)
-     └─ Download + unattended ESET install, enable eraagent
+     └─ Download + unattended ESET install, enable eraagent, reboot when install ran
 ```
 
 ---
@@ -429,6 +429,7 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
+| MOTD           | No static `/etc/motd.d/` banner from cloud-init. `runcmd` disables most `/etc/update-motd.d/` scripts and re-enables only `85-fwupd`, `90-updates-available`, `97-overlayroot`, `98-fsck-at-reboot`, and `98-reboot-required` (see `cloud-init.j2`). |
 | NGT Install    | Provision an additional empty `CDROM` in the disk spec. Because we append this drive before the cloud-init payload, the empty drive manifests as `/dev/sr0`, while `cloud-init` claims the second drive (`/dev/sr1`). Note: Prism Central pc.7.3.1.x lacks v4 APIs for automation. **You must add an Approval Node to the AWX workflow** between the Provisioning and Configuration jobs to pause the pipeline so you can manually "Setup NGT" in Prism Central. |
 
 ---

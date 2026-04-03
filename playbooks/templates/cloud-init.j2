@@ -104,14 +104,6 @@ write_files:
             # Internal-only network - no default route or DNS
 {% endif %}
 
-  # Static banner (PAM reads /etc/motd.d/*). Dynamic MOTD is built from executable
-  # scripts in /etc/update-motd.d/ - see runcmd below; do not duplicate this file there.
-  - path:    /etc/motd.d/00-sltn
-    permissions: "0644"
-    content: |
-      ++ SLTN Cloud Linux ++
-      Provisioned via Nutanix
-
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
 # However, since we used write_files to bypass schema validation, we must
