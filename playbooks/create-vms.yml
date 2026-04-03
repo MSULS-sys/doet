@@ -24,7 +24,6 @@
     - name: "Install required Nutanix Python SDKs inside execution environment"
       ansible.builtin.pip:
         name:
-          - ntnx-v3-api-client
           - ntnx-vmm-py-client
         state: present
         extra_args: "--user -q"

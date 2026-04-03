@@ -131,7 +131,6 @@ ansible-galaxy collection install \
 **Python Libraries:**
 ```bash
 pip install \
-  ntnx-v3-api-client \
   ntnx-vmm-py-client
 ```
 
