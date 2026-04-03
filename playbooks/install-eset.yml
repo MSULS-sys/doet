@@ -61,3 +61,12 @@
       ansible.builtin.file:
         path:  "{{ eset_installer_dest }}"
         state: absent
+
+    # -- Reboot ---------------------------------------------------------------
+    - name: "System | Reboot after ESET install"
+      ansible.builtin.reboot:
+        msg: "Rebooting after ESET installation"
+        reboot_timeout: 600
+        post_reboot_delay: 30
+        connect_timeout: 60
+      when: eset_install.changed | default(false)
