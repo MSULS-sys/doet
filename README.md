@@ -186,8 +186,8 @@ required:
 **Injector configuration (YAML)**
 ```yaml
 extra_vars:
-  nutanix_username: "{% raw %}{{ nutanix_user }}{% endraw %}"
-  nutanix_password: "{% raw %}{{ nutanix_pass }}{% endraw %}"
+  nutanix_username: "{{ nutanix_user }}"
+  nutanix_password: "{{ nutanix_pass }}"
 ```
 *(You will bind this credential to the `doet-create-vms` Job Template).*
 
@@ -219,9 +219,9 @@ required:
 ```yaml
 extra_vars:
   ansible_user: "sltnadmin"
-  ansible_password: "{% raw %}{{ admin_password }}{% endraw %}"
-  ansible_ssh_private_key_file: "{% raw %}{{ admin_key }}{% endraw %}"
-  sltnadmin_password_hash: "{% raw %}{{ admin_hash }}{% endraw %}"
+  ansible_password: "{{ admin_password }}"
+  ansible_ssh_private_key_file: "{{ admin_key }}"
+  sltnadmin_password_hash: "{{ admin_hash }}"
 ```
 
 > [!NOTE]

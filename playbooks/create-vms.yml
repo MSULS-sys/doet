@@ -20,26 +20,25 @@
       nutanix_password: "{{ nutanix_password }}"
       validate_certs: "{{ nutanix_validate_certs }}"
 
-  tasks:
-    - name: "[DEBUG] | Check Nutanix Credentials"
+  pre_tasks:
+    - name: "!!! CHECK NUTANIX CREDENTIALS HERE !!!"
       ansible.builtin.debug:
         msg: 
-          - "Prism Host: {{ nutanix_host }}"
-          - "Username: {{ nutanix_username | default('!! UNDEFINED !!') }}"
-          - "Password: {{ '**** HIDDEN ****' if nutanix_password is defined else '!! UNDEFINED !!' }}"
+          - "PRISM HOST: {{ nutanix_host }}"
+          - "USERNAME:   {{ nutanix_username | default('!! EMPTY !!') }}"
+          - "PASSWORD:   {{ '**** SET ****' if nutanix_password is defined else '!! EMPTY !!' }}"
       no_log: false
 
-    - name: "Assert | Nutanix Credentials are present"
+    - name: "Assert | Credentials MUST exist"
       ansible.builtin.assert:
         that:
           - nutanix_username is defined
           - nutanix_password is defined
           - nutanix_username | length > 0
           - nutanix_password | length > 0
-        fail_msg: >-
-          Nutanix credentials are missing! Ensure your AWX Job Template has the correctly 
-          mapped Nutanix Credential attached and that the Custom Credential Injector 
-          is using the correct variable names (nutanix_username, nutanix_password).
+        fail_msg: "FATAL: Nutanix credentials are not defined in AWX!"
+
+  tasks:
 
     # -- Resolve Image ext_id ------------------------------------------------
     # If the user defines 'vm_image_uuid', use it directly and skip the name lookup.
