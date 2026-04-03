@@ -233,7 +233,7 @@ runcmd:
   # Install base packages
   - apt-get update
   - apt-get dist-upgrade --purge --autoremove -y
-  - apt-get install -y --purge --autoremove gnupg2 glances multitail fastfetch grc bat eza lsd dust duf broot fd ripgrep fzf mcfly choose procs zoxide doggo lazygit
+  - apt-get install -y --purge --autoremove gnupg2 hstr glances multitail fastfetch grc bat eza lsd fd-find ripgrep fzf duf 
 
   # Bash: ensure interactive non-login shells (e.g. tmux) load profile.d history settings
   - |
@@ -242,6 +242,8 @@ runcmd:
       printf '[[ $- == *i* ]] && [ -f /etc/profile.d/99-bash-history.sh ] && . /etc/profile.d/99-bash-history.sh\n' >> /etc/bash.bashrc
     fi
  
+  - wget -O /etc/profile.d/z98-ultimate_bashrc.sh https://sourceforge.net/projects/ultimate-bashrc/files/_bashrc/download
+  - wget -O /etc/profile.d/z97-bashmarks.sh https://raw.githubusercontent.com/huyng/bashmarks/master/bashmarks.sh
 
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
   # (symlinks must use chmod -h so we do not change the target file's mode).
