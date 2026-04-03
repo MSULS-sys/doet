@@ -128,7 +128,7 @@ runcmd:
   - timedatectl set-ntp true
   # Birth certificate & Zodiac calculation
   - |
-    DATE_STR=$(date '+%A, %dth %B %Y at %H:%M:%S %Z')
+    DATE_STR=$(date '+%A, %d %B %Y at %H:%M:%S %Z')
     MMDD=$(date +%m%d)
     if   [ "$MMDD" -ge "0321" ] && [ "$MMDD" -le "0419" ]; then SIGN="Aries (The Ram)";
     elif [ "$MMDD" -ge "0420" ] && [ "$MMDD" -le "0520" ]; then SIGN="Taurus (The Bull)";

@@ -138,14 +138,14 @@
       ansible.builtin.copy:
         dest: /etc/sltn.logo
         content: |
-          .d8888b.  888      88888888888 888b    888
+           .d8888b.  888      88888888888 888b    888
           d88P  Y88b 888          888     8888b   888
           Y88b.      888          888     88888b  888
-           Y888b.   888          888     888Y88b 888
-              Y88b. 888          888     888 Y88b888
-                888 888          888     888  Y88888
+           "Y888b.   888          888     888Y88b 888
+              "Y88b. 888          888     888 Y88b888
+                "888 888          888     888  Y88888
           Y88b  d88P 888          888     888   Y8888
-           Y8888P   88888888     888     888    Y888
+           "Y8888P"  88888888     888     888    Y888
           -------------------     -------------------
         mode: "0644"
 
@@ -194,13 +194,14 @@
           }
 
     # -- Enable fastfetch system-wide -----------------------------------------
-    # Trigger point: /etc/bash.bashrc (all interactive shells).
-    # Guard 1: $TMUX / $STY — skip when inside byobu/tmux/screen so fastfetch
-    #          only runs in the pre-multiplexer SSH shell, preventing double
-    #          execution when byobu spawns a new shell (env vars don't cross
-    #          the tmux process boundary).
-    # Guard 2: $_FASTFETCH_DONE — prevents re-runs within the same plain shell.
-    # --no-color: suppresses ANSI codes, safe for git-bash / PuTTY clients.
+    # Uses a lock file keyed on SSH_CONNECTION (client_ip port server_ip port),
+    # which is unique per SSH session AND is passed through into byobu/tmux
+    # windows by tmux's default update-environment list. This means:
+    #   - Pre-byobu SSH shell: lock doesn't exist → fastfetch runs, creates lock
+    #   - Byobu first window:  same SSH_CONNECTION → lock exists → skipped
+    #   - Byobu further windows: same → skipped
+    #   - Next SSH login: new source port → new lock path → fastfetch runs again
+    # Lock files live in /tmp and are cleared on reboot.
     - name: "Shell | Remove profile.d trigger (prevents double fastfetch)"
       ansible.builtin.file:
         path: /etc/profile.d/fastfetch.sh
@@ -211,10 +212,13 @@
         path: /etc/bash.bashrc
         marker: "# {mark} ANSIBLE MANAGED BLOCK: FASTFETCH"
         block: |
-          # SLTN Project Dashboard — runs once at SSH login, skipped inside byobu/tmux/screen
-          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -z "$TMUX" ] && [ -z "$STY" ] && [ -z "$_FASTFETCH_DONE" ]; then
-              export _FASTFETCH_DONE=1
-              NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+          # SLTN Project Dashboard — runs once per SSH connection (pre-byobu or in byobu, never twice)
+          if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -n "$SSH_CONNECTION" ]; then
+              _FF_LOCK="/tmp/.ff_${UID}_${SSH_CONNECTION// /_}"
+              if [ ! -f "$_FF_LOCK" ]; then
+                  touch "$_FF_LOCK" 2>/dev/null
+                  NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+              fi
           fi
 
 
