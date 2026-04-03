@@ -222,15 +222,17 @@ runcmd:
   - systemctl restart systemd-timesyncd
   - timedatectl set-ntp true
 
-# -- APT Update & Upgrade -------------------------------------------------
+# -- APT -------------------------------------------------
+  - export DEBIAN_FRONTEND=noninteractive
+
   # Add Fastfetch PPA
-  - apt install -y software-properties-common
+  - apt-get install -y software-properties-common
   - add-apt-repository -y ppa:zhangsongcui3371/fastfetch
 
   # Install base packages
-  - apt update
-  - apt dist-upgrade --purge --autoremove -y
-  - [ apt, install, -y, gnupg2, glances, multitail, fastfetch ]
+  - apt-get update
+  - apt-get dist-upgrade --purge --autoremove -y
+  - apt-get install -y --purge --autoremove gnupg2 glances multitail fastfetch
 
   # Bash: ensure interactive non-login shells (e.g. tmux) load profile.d history settings
   - |
