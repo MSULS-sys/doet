@@ -101,15 +101,6 @@
       when:
         - (vm_subnet2_uuid is defined and vm_subnet2_uuid != "") or (vm_subnet2_name is defined)
 
-    # -- Render & Encode cloud-init ------------------------------------------
-    - name: "Render cloud-init for each VM"
-      ansible.builtin.set_fact:
-        vm_cloud_init_text: "{{ vm_cloud_init_text | default({}) | combine({item.name: lookup('template', 'templates/cloud-init.j2')}) }}"
-      loop: "{{ vms }}"
-      loop_control:
-        label: "{{ item.name }}"
-      no_log: false
-
     # -- Create Nutanix VMs --------------------------------------------------
     - name: "Nutanix | Create VM '{{ item.name }}'"
       nutanix.ncp.ntnx_vms:
@@ -152,7 +143,7 @@
         guest_customization:
           type: "cloud_init"
           is_overridable: false
-          script: "{{ vm_cloud_init_text[item.name] }}"
+          script: "{{ lookup('template', 'templates/cloud-init.j2') }}"
       loop: "{{ vms }}"
       loop_control:
         label: "{{ item.name }}"
