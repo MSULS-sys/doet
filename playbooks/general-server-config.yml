@@ -53,7 +53,7 @@
 
     - name: "APT | Configure parallel queue mode and retries"
       ansible.builtin.copy:
-        dest: /etc/apt.conf.d/99parallel
+        dest: /etc/apt/apt.conf.d/99parallel
         content: |
           APT::Acquire::Queue-Mode "access";
           APT::Acquire::Retries 3;
