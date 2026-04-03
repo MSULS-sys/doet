@@ -205,6 +205,32 @@ write_files:
           "uptime"
         ]
       }
+  # -- Fastfetch: System-wide interactive trigger -----------------------------
+  - path: /etc/profile.d/z98-sltn-fastfetch.sh
+    permissions: "0755"
+    content: |
+      # SLTN Project Dashboard - plain SSH once per login; Byobu/tmux once per tmux session
+      if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ]; then
+          _FF_LOCK=""
+          if [[ -n "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
+              _FF_SID="$(tmux display-message -p '#{session_id}' 2>/dev/null)"
+              if [[ -n "$_FF_SID" ]]; then
+                  _FF_LOCK="/tmp/.ff_${UID}_tmuxsess_${_FF_SID}"
+              else
+                  _FF_LOCK="/tmp/.ff_${UID}_tmux_${TMUX//[\/,]/_}"
+              fi
+          elif [[ -n "$STY" ]]; then
+              _FF_LOCK="/tmp/.ff_${UID}_screen_${STY//[.\/]/_}"
+          elif [[ -n "$SSH_CONNECTION" || -n "$SSH_CLIENT" ]]; then
+              _FF_KEY="${SSH_CONNECTION:-$SSH_CLIENT}"
+              _FF_KEY="${_FF_KEY// /_}"
+              _FF_LOCK="/tmp/.ff_${UID}_ssh_${_FF_KEY}"
+          fi
+          if [[ -n "$_FF_LOCK" ]] && [ ! -f "$_FF_LOCK" ]; then
+              touch "$_FF_LOCK" 2>/dev/null
+              NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
+          fi
+      fi
 
 # -- Run commands -------------------------------------------------------------
 # Network is already configured by cloud-init's network module (runs before runcmd).
@@ -244,6 +270,13 @@ runcmd:
   - wget -O /etc/profile.d/z98-ultimate_bashrc.sh https://sourceforge.net/projects/ultimate-bashrc/files/_bashrc/download
   - wget -O /etc/profile.d/z97-bashmarks.sh https://raw.githubusercontent.com/huyng/bashmarks/master/bashmarks.sh
 
+  # CRITICAL: Remove the built-in fastfetch/neofetch from Ultimate Bashrc 
+  # to prevent the double-logo issue.
+  - sed -i '/fastfetch/d; /neofetch/d; /screenfetch/d' /etc/profile.d/z98-ultimate_bashrc.sh
+
+  # Cleanup any old triggers
+  - rm -f /etc/profile.d/fastfetch.sh
+
   # MOTD: disable all update-motd.d scripts, then enable only the ones we want
   # (symlinks must use chmod -h so we do not change the target file's mode).
   - |
@@ -261,37 +294,6 @@ runcmd:
         if [ -L "$p" ]; then chmod -h a+x "$p"; else chmod a+x "$p"; fi
       fi
     done
-
-  # -- Fastfetch: System-wide interactive trigger -----------------------------
-  - |
-    # Remove old profile.d trigger if it exists
-    rm -f /etc/profile.d/fastfetch.sh
-
-    # Append the dashboard logic to /etc/bash.bashrc using a literal heredoc
-    cat << 'EOF' >> /etc/bash.bashrc
-
-    if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ]; then
-        _FF_LOCK=""
-        if [[ -n "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
-            _FF_SID="$(tmux display-message -p '#{session_id}' 2>/dev/null)"
-            if [[ -n "$_FF_SID" ]]; then
-                _FF_LOCK="/tmp/.ff_${UID}_tmuxsess_${_FF_SID}"
-            else
-                _FF_LOCK="/tmp/.ff_${UID}_tmux_${TMUX//[\/,]/_}"
-            fi
-        elif [[ -n "$STY" ]]; then
-            _FF_LOCK="/tmp/.ff_${UID}_screen_${STY//[.\/]/_}"
-        elif [[ -n "$SSH_CONNECTION" || -n "$SSH_CLIENT" ]]; then
-            _FF_KEY="${SSH_CONNECTION:-$SSH_CLIENT}"
-            _FF_KEY="${_FF_KEY// /_}"
-            _FF_LOCK="/tmp/.ff_${UID}_ssh_${_FF_KEY}"
-        fi
-        if [[ -n "$_FF_LOCK" ]] && [ ! -f "$_FF_LOCK" ]; then
-            touch "$_FF_LOCK" 2>/dev/null
-            NO_COLOR=1 /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc
-        fi
-    fi
-    EOF
 
   # Birth certificate & Zodiac calculation
   - |
