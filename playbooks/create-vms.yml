@@ -21,12 +21,12 @@
       validate_certs: "{{ nutanix_validate_certs }}"
 
   pre_tasks:
-    - name: "!!! CHECK NUTANIX CREDENTIALS HERE !!!"
+    - name: "!!! CHECK NUTANIX & ADMIN CREDENTIALS HERE !!!"
       ansible.builtin.debug:
         msg: 
-          - "PRISM HOST: {{ nutanix_host }}"
-          - "USERNAME:   {{ nutanix_username | default('!! EMPTY !!') }}"
-          - "PASSWORD:   {{ '**** SET ****' if nutanix_password is defined else '!! EMPTY !!' }}"
+          - "PRISM HOST:  {{ nutanix_host }}"
+          - "PRISM USER:  {{ nutanix_username | default('!! EMPTY !!') }}"
+          - "ADMIN HASH:  {{ '**** SET ****' if sltnadmin_password_hash is defined else '!! EMPTY !!' }}"
       no_log: false
 
     - name: "Assert | Credentials MUST exist"
