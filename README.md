@@ -426,7 +426,7 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
-| NGT Install    | Provision an additional empty `CDROM` in the disk spec. `cloud-init` claims the first drive (`/dev/sr0`); NGT requires the second empty drive (`/dev/sr1`) to successfully mount from Prism Central. |
+| NGT Install    | Provision an additional empty `CDROM` in the disk spec. `cloud-init` claims the first drive (`/dev/sr0`), so we use `ntnx_vms_ngt_insert_iso_v2` to autonomously tell Prism Central to mount the Linux tools into the second empty drive (`/dev/sr1`) right after creation. This allows `general-server-config.yml` to install them silently. |
 
 ---
 
