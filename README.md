@@ -16,10 +16,13 @@ AWX Workflow Template
 │    └─ Prism Central API via nutanix.ncp
 │         └─ 4× Ubuntu 24.04 VMs with cloud-init
 │
-├── Job 2 ── general-server-config.yml   (hosts: doet_icap, SSH)
+├── Job 2 ── Approval (not a playbook)
+│    └─ "Setup NGT in Prism Central" — human mounts NGT ISO; then Approve in AWX
+│
+├── Job 3 ── general-server-config.yml   (hosts: doet_icap, SSH)
 │    └─ OS baseline: timezone, NTP verify, Nutanix Guest Tools (NGT), fastfetch, UFW, apt upgrade
 │
-└── Job 3 ── install-eset.yml            (hosts: doet_icap, SSH)
+└── Job 4 ── install-eset.yml            (hosts: doet_icap, SSH)
      └─ Download + unattended ESET install, enable eraagent, reboot when install ran
 ```
 
@@ -128,11 +131,7 @@ ansible-galaxy collection install \
   community.general
 ```
 
-**Python Libraries:**
-```bash
-pip install \
-  ntnx-vmm-py-client
-```
+**Python:** `playbooks/create-vms.yml` installs `ntnx-vmm-py-client` in a `pre_tasks` pip step (required by the Nutanix collection for Prism API calls). The AWX execution environment must allow `ansible.builtin.pip` to run there, or bake that package into the EE image and adjust the playbook if you pre-install it.
 
 ### 1. The SSH Key-Pair
 
@@ -370,11 +369,11 @@ When you click **Launch** on your Workflow Template, AWX will ask you three thin
 3. **Survey Prompts** — It will ask you for the `vm_image_name` (or `vm_image_uuid`).
 
 After you hit Next:
-1. Fire Job 1 to create the servers.
+1. **Job 1** runs `doet-create-vms` to create the servers.
 2. Natively export checking statuses and the IP endpoints (`set_stats`).
-3. **Pipeline PAUSES** — The workflow halts at the Approval Node. Follow the **Mid-Deployment NGT Setup** instructions below to mount the ISO. Once complete, click **Approve** in the AWX UI.
-4. Fire Job 2 completely autonomously using SSH.
-5. Fire Job 3 completely autonomously to deploy the final Software.
+3. **Job 2 (Approval)** — The workflow pauses. Follow the **Mid-Deployment NGT Setup** instructions below to mount the ISO in Prism Central. When done, click **Approve** in the AWX UI.
+4. **Job 3** runs `doet-general-server-config` over SSH (NGT install from CD-ROM, baseline, UFW, etc.).
+5. **Job 4** runs `doet-install-eset` over SSH to install ESET and restart services (conditional reboot when install ran).
 
 ---
 
@@ -383,14 +382,16 @@ After you hit Next:
 While this project is optimized for AWX, you can also execute the provisioning pipeline directly from your local terminal using the Ansible CLI.
 
 ### 1. Prerequisites
-Ensure you have the Nutanix collection installed:
+Ensure you have the same collections as in **AWX Prerequisites** (Nutanix + `community.general`):
 ```bash
-ansible-galaxy collection install nutanix.ncp:2.4.0
+ansible-galaxy collection install \
+  nutanix.ncp:2.4.0 \
+  community.general
 ```
 
 ### 2. Execution
 
-The execution is split into two stages. Step 1 (Provisioning) always uses the Nutanix API, while Steps 2 & 3 (Configuration) allow you to choose your authentication method.
+Run the playbooks in order: provision with the API, **manually set up NGT in Prism** (same pause as the AWX Approval step), then configure the OS and install ESET over SSH.
 
 #### Step 1: Provision the VMs (API-only)
 ```bash
@@ -400,7 +401,11 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/create-vms.yml \
   -e "sltnadmin_password_hash='YOUR_SHA512_HASH'"
 ```
 
-#### Step 2: Configure & Verify (Choose your Auth)
+#### Step 2: Set up NGT (manual, outside Ansible)
+
+Mount the Nutanix Guest Tools ISO in Prism Central for each VM (see **Mid-Deployment: Setup NGT in Prism Central** below). This matches the AWX **Approval** node between Job 1 and Job 3.
+
+#### Step 3: Configure & verify (SSH — choose your auth)
 
 **Option A: Using SSH Key-Pairs (Recommended)**
 ```bash
@@ -416,6 +421,14 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
   -k -K
 ```
 *(Note: `-k` prompts for the SSH password; `-K` prompts for the sudo password.)*
+
+#### Step 4: Install ESET (SSH — same credential as Step 3)
+```bash
+ansible-playbook -i inventories/test/hosts.yml playbooks/install-eset.yml \
+  --private-key ~/.ssh/id_ed25519_sltnadmin \
+  -u sltnadmin
+```
+*(Use the same SSH key or password options as in Step 3.)*
 
 ---
 
@@ -536,6 +549,6 @@ It instantly grabs 100% of the newly added Nutanix space natively without any do
 # Lint all playbooks
 ansible-lint playbooks/*.yml
 
-# Dry-run Job 2 against a single host using the new dynamic inventories structure
+# Dry-run general-server-config against a single host
 ansible-playbook playbooks/general-server-config.yml --limit doet-gropicap01-test --check
 ```
