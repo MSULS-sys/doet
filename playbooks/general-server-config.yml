@@ -214,7 +214,7 @@
           # SLTN Project Dashboard — runs once at SSH login, skipped inside byobu/tmux/screen
           if [[ $- == *i* ]] && [ -x /usr/bin/fastfetch ] && [ -z "$TMUX" ] && [ -z "$STY" ] && [ -z "$_FASTFETCH_DONE" ]; then
               export _FASTFETCH_DONE=1
-              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc --no-color
+              /usr/bin/fastfetch --config /etc/fastfetch.config.jsonc --color never
           fi
 
 
