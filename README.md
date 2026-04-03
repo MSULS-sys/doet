@@ -425,7 +425,7 @@ ansible-playbook -i inventories/test/hosts.yml playbooks/general-server-config.y
 | NTP            | Native `ntp:` key + `timesyncd` — correctly synced with `runcmd` task |
 | Data disk      | Native cloud-init `fs_setup` + `mounts` — idempotent, no `wipefs`/`mkfs` in runcmd |
 | hostname/fqdn  | Derived inline from `item.name` + `vm_domain` — no redundant fields in VM list |
-| NGT Install    | Provision an additional empty `CDROM` in the disk spec. `cloud-init` claims the first drive (`/dev/sr0`), so we use `ntnx_vms_ngt_insert_iso_v2` to autonomously tell Prism Central to mount the Linux tools into the second empty drive (`/dev/sr1`) right after creation. This allows `general-server-config.yml` to install them silently. |
+| NGT Install    | Provision an additional empty `CDROM` in the disk spec. Because we append this drive before the cloud-init payload, the empty drive manifests as `/dev/sr0`, while `cloud-init` claims the second drive (`/dev/sr1`). Note: Prism Central pc.7.3.1.x lacks v4 APIs for automation. **You must add an Approval Node to the AWX workflow** between the Provisioning and Configuration jobs to pause the pipeline and click "Install NGT" manually in Prism Central. |
 
 ---
 

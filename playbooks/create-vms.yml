@@ -192,18 +192,6 @@
         index_var: loop_idx
       no_log: false
 
-    # -- Mount NGT ISO -------------------------------------------------------
-    - name: "Nutanix | Mount NGT ISO on '{{ item.name }}'"
-      nutanix.ncp.ntnx_vms_ngt_insert_iso_v2:
-        <<: *ntnx_auth
-        ext_id: "{{ vm_create_results.results[loop_idx].response.metadata.uuid }}"
-        is_config_only: false
-      loop: "{{ vms }}"
-      loop_control:
-        label: "{{ item.name }}"
-        index_var: loop_idx
-      no_log: false
-
     # -- Export Artifacts for AWX --------------------------------------------
     - name: "set_stats | Export icap_vm_ips for downstream jobs"
       ansible.builtin.set_stats:
